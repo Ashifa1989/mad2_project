@@ -1,35 +1,44 @@
 const profile = {
     template :` <div> 
     <div v-if="success">
-    <h2> Username : {{ profile.username}}</h2>
-    <h2> password : {{ profile.password }}</h2>
+    <h2> Welcome {{ profile.username }} !! </h2>
+    
     </div>
     <div v-else>
-        {{ error }}
+        {{ error_message }}
     </div>
     </div>`,
     data(){
         return{
             profile : {
-                "username": 'Ayisha',
-                "password" : "1234"
+                username: 'ashifa'
+                
             },
             success: true,
-            error : "something went wrong"
+            error_message : "something went wrong"
         }
     },
 
     async mounted() {
-        const res = await fetch('http://127.0.0.1:5000/api/users/2') 
-        const data= await res.json() 
+        
+        const res = await fetch(`/api/users/${this.$route.params.id}`) 
+        
+        
         if (res.ok){
+            const data= await res.json()
             this.profile = data            
         }
+        
         else {
+            const errorData = await res.json();
+            console.log("no user found", errorData);
+
             this.success = false
-            this.error = data.message
+            this.error_message = errorData.error_message
+}
         }
-    }
+    
 
 }
 export default profile
+

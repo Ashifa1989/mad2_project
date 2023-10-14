@@ -1,0 +1,6 @@
+.leaf{
+    width:100px;
+    height: 100px;
+    border-radius: 0 100%;
+    background-image: linear-gradient(to right, rgb(183, 244, 100), rgb(52,139,147));
+}
