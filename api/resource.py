@@ -415,14 +415,8 @@ class search_product(Resource):
             
 
         products = query.order_by(Product.timestamp.desc()).all()
-        print(products)
-        if products :
-            return products
-            
-        else:
-            
-            raise SchemaValidationError(status_code=404, error_message="sorry! product not found")
-            
+        #print(products)
+        return products    
         
         
 class search_category(Resource):
