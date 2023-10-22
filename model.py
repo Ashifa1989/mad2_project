@@ -1,45 +1,56 @@
 from flask_sqlalchemy import SQLAlchemy
-from flask_security import UserMixin, RoleMixin
-from datetime import datetime
+from flask_security import UserMixin , RoleMixin 
+from flask_security.utils import hash_password
+import uuid
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, BooleanField
+from wtforms.validators import DataRequired, Email, Length
+from datetime import date ,  datetime, timedelta
 
-db = SQLAlchemy()  
-# Define models
+db=SQLAlchemy()
 
-# roles_users = db.Table('roles_users',
-#         db.Column('user_id', db.Integer(), db.ForeignKey('user.id')),
-#         db.Column('role_id', db.Integer(), db.ForeignKey('role.id')))
-
-class User(db.Model, UserMixin):
-    # pass
-    __tablename__ = "user"
-    id= db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String, unique=True, nullable=True)
-    password = db.Column(db.String, nullable=False)
-    email = db.Column(db.String, unique=True, nullable=False)
-    active = db.Column(db.Boolean, default=False)
-    fs_uniquifier = db.Column(db.String, unique=True, nullable=False) # for generating authentication token
-    
-    #relationship with other model 
-    roles = db.relationship('Role', secondary='roles_users', backref=db.backref('users', lazy= 'dynamic')) #many to many relatioship btw user and role through user_roles
-    cart= db.relationship("Cart", backref='user', cascade = "all, delete") # one to many relation btw user and cart
-    order= db.relationship("Order", backref='user', cascade = "all, delete") # one to many relationship btw user and order
-    Address = db.relationship('Address', backref='user', cascade = "all, delete") # one to many relation btw user and address
-    payment = db.relationship('Payment', backref='user', cascade = "all, delete") # one to many relation between user and payment
+class RolesUsers(db.Model):
+    __tablename__ = 'roles_users'
+    id = db.Column(db.Integer(), primary_key=True)
+    user_id = db.Column('user_id', db.Integer(), db.ForeignKey('user.id'))
+    role_id = db.Column('role_id', db.Integer(), db.ForeignKey('role.id'))
 
 class Role(db.Model, RoleMixin):
-    # pass
-    __tablename__ = "role"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.String, nullable=False)
-    description =db.Column(db.String)
+    __tablename__ = 'role'
+    id = db.Column(db.Integer(), primary_key=True)
+    name = db.Column(db.String(80), unique=True)
+    description = db.Column(db.String(255))
+    permissions = db.Column(db.UnicodeText)
 
-class Roles_users(db.Model):
-    __tablename__ = "roles_users"
+class User(db.Model,UserMixin):
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    role_id = db.Column(db.Integer, db.ForeignKey('role.id'))
+    email = db.Column(db.String(255), unique=True)
+    username = db.Column(db.String(255), unique=True, nullable=True)
+    password = db.Column(db.String(255), nullable=False)
+    active = db.Column(db.Boolean())
+    fs_uniquifier = db.Column(db.String(255), unique=True , nullable=False)
+    roles = db.relationship('Role', secondary='roles_users',
+                         backref=db.backref('users', lazy='dynamic'))
 
+    def __init__(self, email, password,username,active):
+        self.username=username
+        self.email = email
+        self.active=active
+        #self.roles=roles
+        self.password = password
+        self.fs_uniquifier = generate_random_uniquifier()
 
+def generate_random_uniquifier():
+    # Generate a unique value using UUID
+    uniquifier = str(uuid.uuid4())
+    return uniquifier
+
+class LoginForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    remember_me = BooleanField('Remember Me')
+    
 class Category(db.Model):
     __tablename__ = "category"
     category_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

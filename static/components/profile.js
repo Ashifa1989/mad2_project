@@ -21,9 +21,10 @@ const profile = {
 
     async mounted(){
         
-        const res = await fetch(`/api/users/${this.$route.params.id}`,{
+        const res = await fetch("/api/user",{
             headers :{
                 "Content-Type" : "application/json",
+                "Authentication-Token" : localStorage.getItem("Auth_token")
             }
         }) 
         console.log(res.status)

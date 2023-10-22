@@ -30,5 +30,16 @@ const router = new VueRouter({
 
 const app = new Vue({
     el : "#app",
-    router
+    router,
+    methods: {
+        async logout(){
+            const res =await fetch("/logout")
+            if(res.ok){
+                this.$router.push("/login")
+            }
+            else{
+                console.log("something went wrong. could not logout the user")
+            }
+        }
+    }
 })

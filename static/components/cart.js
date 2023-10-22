@@ -37,7 +37,7 @@ const cart = {
     } ,   
     methods: {
         async getCart(){
-            const res =await fetch(`http://127.0.0.1:5000/api/cart/user/1`)
+            const res =await fetch(`http://127.0.0.1:5000/api/cart/user`)
             if (res.ok){
                 const data = await res.json()
                 this.success = true

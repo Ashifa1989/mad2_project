@@ -144,7 +144,7 @@ const search = {
             }
         },
         async addtoCart() {
-            const res = await fetch("http://127.0.0.1:5000/api/cart/user/1", {
+            const res = await fetch("http://127.0.0.1:5000/api/cart/user", {
                 method: "post",
                 headers: {
                     "Content-Type": "application/json",
@@ -156,7 +156,7 @@ const search = {
 
 
             if (res.ok) {
-                this.$router.push("'/cart/user/1'")
+                this.$router.push("'/cart/user'")
             }
             else {
                 console.log("something went wrong")

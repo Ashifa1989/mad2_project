@@ -1,6 +1,6 @@
 from  flask_restful import Api, Resource, abort, fields, marshal_with, reqparse ,marshal
-from model import db, User as user_model, Role, Category, Product, Cart, Order, Order_item, Roles_users, Address,Payment
-from flask_security  import   login_user , auth_required, login_required, roles_required,LoginForm
+from model import db, User as user_model, Role, Category, Product, Cart, Order, Order_item, RolesUsers, Address,Payment
+from flask_security  import   login_user , auth_required, roles_required, current_user
 from flask import make_response
 from flask_security.utils import hash_password, verify_password 
 from werkzeug.exceptions import HTTPException
@@ -132,46 +132,45 @@ class SchemaValidationError(HTTPException):
         self.response = make_response(json.dumps(data), status_code)
 
 
-# class Users(Resource):
+class Users(Resource):
     
-#     @marshal_with(output_user_field)
-#     def get(self):
-#         all_user=user_model.query.all()
-#         if all_user is None:
-#              raise SchemaValidationError(status_code="404", error_message="users not found")
-#         else:
-#             return all_user 
-#     # @marshal_with(output_user_field)
-#     def post(self):  #login user
-#         args = user_register_parser.parse_args()
-#         print(args)
-#         user_name = args.get("username", None)
-#         password = args.get("password",None)
-#         user=user_model.query.filter_by(username=user_name).first()
-#         if(user):
+    @marshal_with(output_user_field)
+    def get(self):
+        all_user=user_model.query.all()
+        if all_user is None:
+             raise SchemaValidationError(status_code="404", error_message="users not found")
+        else:
+            return all_user 
+    # # @marshal_with(output_user_field)
+    # def post(self):  #login user
+    #     args = user_register_parser.parse_args()
+    #     print(args)
+    #     user_name = args.get("username", None)
+    #     password = args.get("password",None)
+    #     user=user_model.query.filter_by(username=user_name).first()
+    #     if(user):
         
-#             success = verify_password (password=password, password_hash=user.password)
+    #         success = verify_password (password=password, password_hash=user.password)
                 
-#             if (success):
-#                 login_user(user)
-#                 token = user.get_auth_token()
-#                 return {'username': user_name, 'id' : user.id, 'token': token}, 200 
-#             else:
-#                 raise SchemaValidationError(status_code=404, error_message="Invalid username or password")          
-#         else:
-#             raise SchemaValidationError(status_code=404, error_message="Invalid username or password")
+    #         if (success):
+    #             login_user(user)
+    #             token = user.get_auth_token()
+    #             return {'username': user_name, 'id' : user.id, 'token': token}, 200 
+    #         else:
+    #             raise SchemaValidationError(status_code=404, error_message="Invalid username or password")          
+    #     else:
+    #         raise SchemaValidationError(status_code=404, error_message="Invalid username or password")
         
 
 
-class UserApi(Resource):
-    
+class UserApi(Resource):    
+    @auth_required("token")
     @marshal_with(output_user_field)    
-    def get(self,id=None):
-        print(id)
+    def get(self):
+        id = current_user.id
         user=user_model.query.filter_by(id=id).first()
         
         if user:
-            print(user)
             return user
         else:
              raise SchemaValidationError(status_code=404, error_message="user not found")
@@ -186,20 +185,21 @@ class UserApi(Resource):
         user = user_model.query.filter_by(username = user_name).first()
         if user:
             raise AlreadyExistsError(
-                status_code=409,  error_message="username  already exists")
+                status_code=409,  error_message="Username  already exists")
+
+        user = user_model.query.filter_by(email = email).first()
+        if user:
+            raise AlreadyExistsError(
+                status_code=409,  error_message="Email already used")
         
-        new_user = user_model()
-        new_user.username =  user_name
-        new_user.password = hash_password(password)
-        new_user.email=email
-        new_user.fs_uniquifier = user_name
+        new_user = user_model(email, hash_password(password), user_name,True)
 
         db.session.add(new_user)
         db.session.commit()
 
         #add customer role to the new registered user
         role = Role.query.filter_by(name = "Customer").first()
-        role_user = Roles_users()
+        role_user = RolesUsers()
         role_user.user_id = new_user.id
         role_user.role_id = role.id
 
@@ -209,7 +209,8 @@ class UserApi(Resource):
         return ("Successfully created new user", 200)
    
     # @marshal_with(output_user_field)
-    def put(self, id): #update user information
+    def put(self): #update user information
+        id=current_user.id
         user = user_model.query.filter_by(id = id).first()
         if user is None :
              raise SchemaValidationError(status_code=404, error_message="user not found")
@@ -229,7 +230,8 @@ class UserApi(Resource):
         return ("Successfully update the user", 200)
     
     # @marshal_with(output_user_field)
-    def delete(self, id):
+    def delete(self):
+        id=current_user.id
         user = user_model.query.filter_by(id=id).first()
         if user is None :
              raise SchemaValidationError(status_code=404, error_message="user not found")
@@ -266,6 +268,7 @@ class Categories(Resource):
     
     # @marshal_with(output_Category_field)
     @auth_required("token")
+    @roles_required("Admin")
     def post(self):
         args= add_category_parser.parse_args()
         category_name = args.get("category_name", None)
@@ -456,22 +459,21 @@ class search_category(Resource):
         
 class cart_Api(Resource):
     @marshal_with(output_cart_field)
-    def get(self, user_id):
-        print(user_id)
+    def get(self):
+        user_id=current_user.id
         cart=Cart.query.filter_by(user_id=user_id).all()
-        print(cart)
         if cart:
             return cart
         else:
             raise SchemaValidationError(status_code=404, error_message="There are no items in your cart ")
     
     # @marshal_with(output_cart_field)
-    def post(self, user_id):
+    def post(self):
         arg = cart_parser.parse_args()
         product_id=arg.get("product_id", None)
         quantity = arg.get("quantity", 0)
-        # user_id = arg.get("user_id", None)
-        # print(login_user(user_id))
+        user_id = current_user.id
+        
         
         product=Product.query.filter_by(product_id=product_id).first()
         if product is None:
@@ -555,13 +557,13 @@ class address_api(Resource):
         args = address_parser.parse_args()
 
 
-# api.add_resource(Users, "/users","/users/login")
-api.add_resource(UserApi, "/users/<int:id>", "/users/register")
+api.add_resource(Users, "/users")
+api.add_resource(UserApi, "/user", "/user/register")
 api.add_resource(Categories, "/category")
 api.add_resource(CategoryApi, "/category/<id>")
 api.add_resource(products, "/product")
 api.add_resource(search_category, "/category/search")
 api.add_resource(Product_Api,  "/product/<int:id>", "/product/category/<string:category_name>")
 api.add_resource(search_product, "/product/search")
-api.add_resource(cart_Api,  "/cart/<int:cart_id>", "/cart/user/<int:user_id>")
+api.add_resource(cart_Api,  "/cart/<int:cart_id>", "/cart/user")
 api.add_resource(Order_api, "/order/<int:user_id>")

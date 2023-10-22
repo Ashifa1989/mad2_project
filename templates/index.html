@@ -50,11 +50,13 @@
         <router-link to="/"> home </router-link>
         <router-link to="/signUp"> signUp </router-link>
         <router-link to="/profile/{{ id }}" > profile </router-link>
-        <router-link to="/login" style="float: right"> Login </router-link> 
+        <a href="" @click.prevent="logout" style="float: right ; margin-right: 20px"> Logout </a>
+        <router-link to="/login" style="float: right; margin-right: 20px"> Login </router-link> 
+         
         <router-link to="/product/{{id}}"> product </router-link>
         <router-link to="/all_product"> allProduct </router-link>
         <router-link to="/all_category" > categories </router-link>
-        <router-link to="/cart/user/1" style="float: right"> Cart </router-link>
+        <router-link to="/cart/user/1" style="float: right; margin-right: 20px"> Cart </router-link>
         <router-link to="/search" > search </router-link> 
         <router-view style="margin-top: 20px; float: center"></router-view>
     </div>    
