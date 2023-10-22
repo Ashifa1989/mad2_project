@@ -11,7 +11,7 @@ const profile = {
     data(){
         return{
             profile : {
-                username: 'ashifa'
+                username: ''
                 
             },
             success: true,
@@ -19,26 +19,36 @@ const profile = {
         }
     },
 
-    async mounted() {
+    async mounted(){
         
-        const res = await fetch(`/api/users/${this.$route.params.id}`) 
-        
-        
-        if (res.ok){
+        const res = await fetch(`/api/users/${this.$route.params.id}`,{
+            headers :{
+                "Content-Type" : "application/json",
+            }
+        }) 
+        console.log(res.status)
+        if (res.status == 401) {
             const data= await res.json()
-            this.profile = data            
+            console.log("no user found", data);
+            this.success = false
+            this.error_message ="not an autheticated user"
         }
-        
+        else if (res.ok){
+            const data= await res.json()
+            this.profile = data
+            console.log(data)            
+        }
         else {
             const errorData = await res.json();
             console.log("no user found", errorData);
 
             this.success = false
             this.error_message = errorData.error_message
-}
         }
+    }
     
 
 }
+
 export default profile
 

@@ -18,7 +18,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String, unique=True, nullable=False)
     active = db.Column(db.Boolean, default=False)
     fs_uniquifier = db.Column(db.String, unique=True, nullable=False) # for generating authentication token
-
+    
     #relationship with other model 
     roles = db.relationship('Role', secondary='roles_users', backref=db.backref('users', lazy= 'dynamic')) #many to many relatioship btw user and role through user_roles
     cart= db.relationship("Cart", backref='user', cascade = "all, delete") # one to many relation btw user and cart
@@ -31,7 +31,7 @@ class Role(db.Model, RoleMixin):
     __tablename__ = "role"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String, nullable=False)
-    Description =db.Column(db.String)
+    description =db.Column(db.String)
 
 class Roles_users(db.Model):
     __tablename__ = "roles_users"
@@ -55,6 +55,7 @@ class Product(db.Model):
     Description = db.Column(db.Text)
     Catagory_id = db.Column(db.Integer, db.ForeignKey('category.category_id'))
     price_per_unit =  db.Column(db.Integer)
+    quantity = db.Column(db.Integer)
     Stock = db.Column(db.Integer)
     image_url = db.Column(db.Text, nullable=True)
     manufacture_date = db.Column(db.String)
@@ -98,9 +99,9 @@ class Payment(db.Model):
     __tablename__ = "payment"  
     payment_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'),nullable=False)
-    order_id = db.Column(db.Integer, db.ForeignKey('order.order_id'), nullable=False)
-    amount = db.Column(db.Float)
-    payment_date = db.Column(db.DateTime, default=datetime.utcnow)
+    card_number =db.Column(db.Integer)
+    cvv=db.Column(db.Integer)
+    expiry_date = db.Column(db.Integer)
     
 class Address(db.Model):
     __tablename__ = "address" 

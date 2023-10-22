@@ -1,66 +1,64 @@
 const cart = {
     template : `<div>
-    <button @click.prevent="show_cart_item">Cart</button> 
-    <div v-if="success">
-    <h2> {{ products.product_name }}</h2>
-    <h2> {{ products.price_per_unit }}</h2>
-    <p>Total Amount: {{ products.total_amount  }}</p> 
-    <p>Total Amount: {{ total_amount  }}</p> 
     
-    <p>
-      Quantity
-      <input type="number" placeholder="number of items.." v-model=products.quantity>
-    </p>
-    
-    
-    <h3> {{$route.params.id}} </h3>
-   
-    
+    <div v-if="success" v-for="product in cart" >
+
+        <div> image;{{ product.image_url }}</div>
+        <div> Name:{{ product.product_name }}</div>
+        <div> price:{{ product.price_per_unit }}</div>
+        <div>Quantity: {{  product.quantity  }}</div> 
+        
     </div>
     <div v-else>
-        {{ error_message }}
+    {{ error_message }}
+    
     </div>
+    <button @click.prevent="AddItems" > countinue shopping </button>
+    <router-link to="/order/1" > 
+    <button @click.prevent="OrderLIst" > order </button>
+    </router-link>
     
     </div>`,
     data () {
         return {
-        products : [{
+        cart : [{
             product_name : "",
+            image_url: "",
+            product_id: 1,
             quantity : 0,
-            price_per_unit : 10,
+            price_per_unit : 0,
             total_amount : 0
         }],
+        product:{},
         success : true,
-        errror_message : "To add to your trolley, you'll need an account."
+        error_message : "To add to your trolley, you'll need an account."
         
     }
-        
-
-
-    }, 
+    } ,   
     methods: {
-        async show_cart_item(){
-            const res = await fetch(`/api/cart/user/${this.$route.params.id}`)
-            
+        async getCart(){
+            const res =await fetch(`http://127.0.0.1:5000/api/cart/user/1`)
             if (res.ok){
-                const data= await res.json()
-                this.products =data
-                console.log(data )
+                const data = await res.json()
+                this.success = true
+                this.cart= data
+                console.log(data)
             }
-            else {
-                const errorData= await res.json() 
+            else{
+                const errorData= await res.json()
                 this.success = false
-                this.errror_message= data.errror_message
+                this.error_message = errorData.error_message
             }
+        },
+        async AddItems(){
+              
+           this.$router.push('/search')
         }
-    },
-    computed: {
-        total_amount(){
-            const total = this.products.quantity * this.products.price_per_unit
-            
-            return total
-        }
+        },
+    mounted(){
+        this.getCart()
     }
-
-}
+    
+        
+}        
 export default cart

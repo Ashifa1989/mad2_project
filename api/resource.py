@@ -1,6 +1,6 @@
-from  flask_restful import Api, Resource, abort, fields, marshal_with, reqparse
-from model import db, User as user_model, Role, Category, Product, Cart, Order, Order_item, Roles_users
-from flask_security import   login_user
+from  flask_restful import Api, Resource, abort, fields, marshal_with, reqparse ,marshal
+from model import db, User as user_model, Role, Category, Product, Cart, Order, Order_item, Roles_users, Address,Payment
+from flask_security  import   login_user , auth_required, login_required, roles_required,LoginForm
 from flask import make_response
 from flask_security.utils import hash_password, verify_password 
 from werkzeug.exceptions import HTTPException
@@ -8,10 +8,12 @@ import json
 from datetime import datetime
 
 
+
 api = Api(prefix="/api")
 
 output_user_field = {
     "username" : fields.String,
+
     # "email" : fields.String,
     # "password" : fields.String,
     # "id": fields.Integer
@@ -46,8 +48,6 @@ output_cart_field = {
     "image_url" : fields.String,
     "quantity" : fields.Integer
 }
-
-
 
 user_register_parser = reqparse.RequestParser()  # Create a RequestParser object
 user_register_parser.add_argument('username')     # Define the expected arguments
@@ -111,6 +111,16 @@ cart_parser.add_argument("price_per_unit")
 cart_parser.add_argument("user_id")
 cart_parser.add_argument("cart_id")
 
+address_parser = reqparse.RequestParser()
+address_parser.add_argument(" street")
+address_parser.add_argument("city")
+address_parser.add_argument("state")
+address_parser.add_argument("postal_code")
+
+
+
+
+
 class AlreadyExistsError(HTTPException):
     def __init__(self, status_code, error_message):
         data = {"error_message": error_message}
@@ -121,45 +131,51 @@ class SchemaValidationError(HTTPException):
         data = {"error_message": error_message}
         self.response = make_response(json.dumps(data), status_code)
 
-class Users(Resource):
-    @marshal_with(output_user_field)
-    def get(self):
-        all_user=user_model.query.all()
-        if all_user is None:
-             raise SchemaValidationError(status_code="404", error_message="users not found")
-        else:
-            return all_user 
-    def post(self):  #login user
-        args = user_register_parser.parse_args()
-        print(args)
-        user_name = args.get("username", None)
-        password = args.get("password",None)
-        user=user_model.query.filter_by(username=user_name).first()
-        if(user):
+
+# class Users(Resource):
+    
+#     @marshal_with(output_user_field)
+#     def get(self):
+#         all_user=user_model.query.all()
+#         if all_user is None:
+#              raise SchemaValidationError(status_code="404", error_message="users not found")
+#         else:
+#             return all_user 
+#     # @marshal_with(output_user_field)
+#     def post(self):  #login user
+#         args = user_register_parser.parse_args()
+#         print(args)
+#         user_name = args.get("username", None)
+#         password = args.get("password",None)
+#         user=user_model.query.filter_by(username=user_name).first()
+#         if(user):
         
-            success = verify_password (password=password, password_hash=user.password)
+#             success = verify_password (password=password, password_hash=user.password)
                 
-            if (success):
-                login_user(user)
-                token = user.get_auth_token()
-                return {'username': user_name, 'id' : user.id, 'token': token}, 200 
-            # else:
-            #     return { "error_message" : "Invalid password"}           
-        else:
-             raise SchemaValidationError(status_code=404, error_message="Invalid username or password")
-            # return { "error_message" :"Invalid username "}
+#             if (success):
+#                 login_user(user)
+#                 token = user.get_auth_token()
+#                 return {'username': user_name, 'id' : user.id, 'token': token}, 200 
+#             else:
+#                 raise SchemaValidationError(status_code=404, error_message="Invalid username or password")          
+#         else:
+#             raise SchemaValidationError(status_code=404, error_message="Invalid username or password")
+        
+
 
 class UserApi(Resource):
-
-    @marshal_with(output_user_field)
-    def get(self,id):
+    
+    @marshal_with(output_user_field)    
+    def get(self,id=None):
+        print(id)
         user=user_model.query.filter_by(id=id).first()
+        
         if user:
+            print(user)
             return user
         else:
-             raise SchemaValidationError(status_code=404, error_message="Invalid username or password")
+             raise SchemaValidationError(status_code=404, error_message="user not found")
             
-    
     def post(self): #register
         args = user_register_parser.parse_args()
         print(args)
@@ -249,18 +265,21 @@ class Categories(Resource):
         return all_category
     
     # @marshal_with(output_Category_field)
+    @auth_required("token")
     def post(self):
         args= add_category_parser.parse_args()
         category_name = args.get("category_name", None)
+        print(category_name)
         image = args.get("imagelink", None)
         category =  Category.query.filter_by(category_name=category_name).first()
+        print(category)
         if category:
             raise AlreadyExistsError(
                 status_code=409,  error_message="category  already exists")
         new_category=Category(category_name=category_name, imagelink=image)
         db.session.add(new_category)
         db.session.commit()
-        return ("Successfully created new category", 200)
+        return {"message":"Successfully created new category", "status_code":200}
 
     
 class CategoryApi(Resource):
@@ -274,7 +293,7 @@ class CategoryApi(Resource):
             raise SchemaValidationError(status_code=404, error_message="category not found ")
         else:
              return category
-    
+    @auth_required("token")
     @marshal_with(output_Category_field)
     def put(self, id):
         category =  Category.query.filter_by(category_id=id).first()
@@ -298,13 +317,14 @@ class CategoryApi(Resource):
 class products(Resource):
     @marshal_with(output_product_field)
     def get(self):
-        # product = Product.query.filter_by(product_id=id).first()
+
+        
         product = Product.query.order_by(Product.timestamp.desc()).all()  # Sort by timestamp
         
         return product
 
     # @marshal_with(output_product_field)
-    def post(self):
+    def post(self):                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
         args=add_product_parser.parse_args()
        
         name = args.get("product_name", None)
@@ -327,6 +347,7 @@ class products(Resource):
         
         db.session.add(new_product)
         db.session.commit()
+        
         return ("Successfully created the product", 200)
     
 
@@ -334,13 +355,13 @@ class products(Resource):
 class Product_Api(Resource):
      
     @marshal_with(output_product_field)
-    def get(self, category_name): #get all the product related to pairticular category
-        # product = Product.query.filter_by(Catagory_id=Catagory_id).all()
-        # product = Product.query.join(Category).filter(category.category_name=category_name)
-        product = db.session.query(Product).join(Category).filter(Category.category_name == category_name).all()
+    def get(self,id): 
+        
+        product = Product.query.filter_by(product_id=id).first()
+        
         print(product)
-        if product is []:
-             raise SchemaValidationError(status_code=404, error_message="product not found")
+        if product is None:
+             raise SchemaValidationError(status_code=404, error_message="sorry!! No product  found")
         return product
 
     
@@ -401,7 +422,7 @@ class search_product(Resource):
         # Add filters based on query parameters
         if category_name:
             query = query.join(Category).filter(Category.category_name==category_name)
-            print(query)
+            
             
         if min_price:
             query = query.filter(Product.price_per_unit >= min_price)
@@ -412,12 +433,13 @@ class search_product(Resource):
         if search_word:
             search = f"%{search_word}%"
             query= query.filter(Product.product_name.like(search))
+        
             
-
         products = query.order_by(Product.timestamp.desc()).all()
         #print(products)
-        return products    
         
+        
+        return products
         
 class search_category(Resource):
     @marshal_with(output_Category_field)
@@ -435,8 +457,9 @@ class search_category(Resource):
 class cart_Api(Resource):
     @marshal_with(output_cart_field)
     def get(self, user_id):
-        cart=Cart.query.filter_by(user_id=user_id).join(Product).all()
-        print(cart[0].user_id)
+        print(user_id)
+        cart=Cart.query.filter_by(user_id=user_id).all()
+        print(cart)
         if cart:
             return cart
         else:
@@ -448,8 +471,12 @@ class cart_Api(Resource):
         product_id=arg.get("product_id", None)
         quantity = arg.get("quantity", 0)
         # user_id = arg.get("user_id", None)
+        # print(login_user(user_id))
         
         product=Product.query.filter_by(product_id=product_id).first()
+        if product is None:
+            raise SchemaValidationError(status_code=404, error_message="sorry, No product found ")
+    
         cart = Cart(product=product, quantity = quantity, user_id =user_id, price_per_unit = product.price_per_unit, total_price=(quantity*product.price_per_unit))
         
         
@@ -475,6 +502,13 @@ class cart_Api(Resource):
             raise SchemaValidationError(status_code=404, error_message="product not found in cart")
         
 class Order_api(Resource):
+    @marshal_with(output_cart_field)
+    def get (self, user_id):
+        cart_items=Cart.query.filter_by(user_id=user_id).all()
+        if cart_items is []:
+             raise SchemaValidationError(status_code=404, error_message="sorry!! No items in your cart")
+
+        return cart_items
     def post(self, user_id):
         # args= cart_parser.parse_args()
         # user_id = args.get("user_id", None)
@@ -485,12 +519,20 @@ class Order_api(Resource):
         total_price=0
         for item in cart_items:
             total_price=total_price+item.total_price
-        
-    
+        address = Address.query.join(user_model).filter_by(id=user_id).first()
+        if address is None:
+            raise SchemaValidationError(status_code=404, error_message="please add your address details")
+        else:
+            id=address.address_id
+        payment_detail= Payment.query.join(user_model).filter_by(id=user_id).first()
+        if payment_detail is None:
+            raise SchemaValidationError(status_code=404, error_message="please add your payment details")
+        else:
+            id= payment_detail.payment.id
         new_order = Order(user_id=user_id, total_price=total_price,  
                     order_date=datetime.now(),
-                    payment_id=None,
-                    address_id=None)
+                    payment_id=id,
+                    address_id=id)
         db.session.add(new_order)
         db.session.commit()
         
@@ -505,15 +547,21 @@ class Order_api(Resource):
             db.session.delete(cart_item)  
         db.session.commit()
         return {"message": "Order placed successfully"}, 200
+class address_api(Resource):
+    def get(self, user_id):
+        address = Address.query.join(user_model).filter_by(user_id=user_id).all()
+        return address
+    def post(self, user_id):
+        args = address_parser.parse_args()
 
 
-api.add_resource(Users, "/users","/users/login")
+# api.add_resource(Users, "/users","/users/login")
 api.add_resource(UserApi, "/users/<int:id>", "/users/register")
 api.add_resource(Categories, "/category")
 api.add_resource(CategoryApi, "/category/<id>")
-api.add_resource(products, "/product", "/product/<int:id>")
+api.add_resource(products, "/product")
 api.add_resource(search_category, "/category/search")
-api.add_resource(Product_Api, "/product/<int:id>", "/product/category/<string:category_name>")
+api.add_resource(Product_Api,  "/product/<int:id>", "/product/category/<string:category_name>")
 api.add_resource(search_product, "/product/search")
 api.add_resource(cart_Api,  "/cart/<int:cart_id>", "/cart/user/<int:user_id>")
 api.add_resource(Order_api, "/order/<int:user_id>")

@@ -1,52 +1,61 @@
 const search = {
-    template: `<div>
-    <form>
-      <div class="search-bar container"> 
-      <div class="row row-cols-auto">       
-        <div class="col">
-            <select v-model="searchQuery.category_name" class="form-control">
-            <option disabled value="">category name</option>
-            <option v-for="category in categories" :value="category.category_name" :key="category.category_name">
-                {{ category.category_name }}
-            </option>
-            </select>
-        </div>
-        <div class="col">
-            <input type="number" class="form-control" placeholder="min" v-model="searchQuery.min_price"/>
-        </div>
-        <div class="col">
-            <input type="number" class="form-control" placeholder="max" v-model="searchQuery.max_price"/>
-        </div>
-        <div class="col">
-            <input type="text" class="form-control" placeholder="product name" v-model="searchQuery.search_word"/>
-        </div>
-        <div class="col">
-            <button class="btn btn-primary" @click.prevent="searchProducts">Search</button>
-        </div>
-      </div>
-      </div>
-    </form>
-    <div class="row row-cols-1 row-cols-md-4 g-4"> 
-      <div v-if="success"  v-for="product in products"> 
-        <div class="col">
-          <div class="card">
-            <img src="{{ product.image_url }}" class="card-img-top" alt="...">
-            <div class ="card-body">
-            <div>
-                <h5 class="card-title">{{ product.product_name }}</h5>
-                <p class="card-text">{{ product.Description}} </p>
-                <div > Price: {{ product.price_per_unit }} </div>
-                <a href="#" class="btn btn-primary">Add to cart</a>
-                               
-            </div>  
+    template: `
+        <div>
+        <form>
+            <div class="search-bar container">
+                    <div class="col">
+                        <select v-model="searchQuery.category_name" class="form-control">
+                            <option disabled value="">category name</option>
+                            <option v-for="category in categories" :value="category.category_name" :key="category.category_name">{{ category.category_name }}</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <input type="number" class="form-control" placeholder="min" v-model="searchQuery.min_price"></input>
+                    </div>
+                    <div class="col">
+                        <input type="number" class="form-control" placeholder="max" v-model="searchQuery.max_price"></input>
+                    </div>
+                    <div class="col">
+                        <input type="text" class="form-control" placeholder="product name" v-model="searchQuery.search_word"></input>
+                    </div>
+                    <div class="col">
+                    <button class="btn btn-primary" @click.prevent="searchProducts">Search</button>
+                    </div>                
             </div>
-          </div>
-      </div>
-    </div>
-    <div v-else>
-    {{ error_message }}
-    </div>
-    </div>`,
+        </form >
+        <p></p>
+        <div class="row row-cols-1 row-cols-md-4 g-4">
+            <div v-if="success" v-for="product in products">
+            
+                <div class="col">
+                    <div class="card h-100">
+                        <img :src=" product.image_url " class="card-img-top" alt="...">
+                            <div class="card-body">
+                                <div>
+                                    <h5 class="card-title">{{ product.product_name }}</h5>
+                                    <p class="card-text">{{ product.Description }} </p>
+                                    <div > Price: {{ product.price_per_unit }} </div>
+                                    
+                                    <div>
+                                        Quantity
+                                        <input type="number" placeholder="number of items" v-model=product.quantity >
+
+                                    </div>
+                                    <div>
+
+                                    
+                                    <button class="btn btn-primary" @click.prevent="addtoCart">AddtoCart</button>
+                                    
+                                    </div>
+
+                                </div>
+                            </div>
+                    </div>
+                </div>
+            </div> 
+        </div>   
+                    
+        </div>`,
 
     data() {
         return {
@@ -57,18 +66,9 @@ const search = {
                 manufacture_date: '',
                 search_word: '',
             },
-            products: [
-                {
-                    product_name: 'Product 1',
-                    Description: 'Description for Product 1',
-                    price_per_unit: 'Price for Product 1',
-                    stock: 'Stock for Product 1',
-                    image_url: 'Image URL for Product 1',
-                    manufacture_date: 'Manufacture date for Product 1',
-                    expairy_date: 'Expiry date for Product 1'
-                },
-            ],
+            products: [],
             categories: [],
+            product:{},
             success: true,
             error_message: ""
         };
@@ -91,6 +91,8 @@ const search = {
                 this.categories = []
             }
         },
+
+
         async searchProducts() {
             const res = await fetch("http://127.0.0.1:5000/api/product/search", {
                 method: "post",
@@ -101,20 +103,69 @@ const search = {
                 },
                 body: JSON.stringify(this.searchQuery)
             })
-            console.log("Response status code:", res.status);
-            console.log("Response:", res); // Log the entire response
+
+
+            if (res.ok) {
+                const data = await res.json()
+                if (data == []) {
+                    console.log("sorry!! no product found")
+                }
+                else {
+                    this.products = data
+                }
+
+
+            }
+            else {
+                console.log("something went wrong")
+            }
+        },
+
+        async show_cart_item() {
+            const res = await fetch(`/api/cart/user/${this.$route.params.id}`)
 
             if (res.ok) {
                 const data = await res.json()
                 this.products = data
+                console.log(data[0].price_per_unit)
             }
             else {
-                const errorData = await res.json();
-
+                const errorData = await res.json()
                 this.success = false
-                this.error_message = errorData.error_message
+                this.error_message = data.errror_message
             }
-        }
+        },
+        incrementQuantity() {
+            this.quantity++
+        },
+        decrementQuantity() {
+            if (this.quantity > 0) {
+                this.quantity--
+            }
+        },
+        async addtoCart() {
+            const res = await fetch("http://127.0.0.1:5000/api/cart/user/1", {
+                method: "post",
+                headers: {
+                    "Content-Type": "application/json",
+                    
+
+                },
+                body: JSON.stringify(this.product)
+            })
+
+
+            if (res.ok) {
+                this.$router.push("'/cart/user/1'")
+            }
+            else {
+                console.log("something went wrong")
+            }
+        },
+
+
+
+
     },
 }
 

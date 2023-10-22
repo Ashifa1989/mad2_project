@@ -2,8 +2,9 @@ const login = {
     template : `<div>
     
     <form >
-
-    <p><input type="text" name="email" id="email"  placeholder="username" v-model="formData.username" ></input></p>
+    <label for="email">Email:</label>
+    <p><input type="email" name="email"   placeholder="email" v-model="formData.email" ></input></p>
+    <p><label for="password">Password:</label></p>
     <p><input type="password" name="password" id="password" placeholder="password" v-model="formData.password" ></input></p>
     <button @click.prevent="loginUser">LoginCustomer</button> 
     <button @click.prevent="loginManager">LoginManager</button>
@@ -19,6 +20,7 @@ const login = {
             formData: {
                 username : "",
                 password : "",
+                email :""
             },
             success : true,
             error_message : "something went wrong"
@@ -26,12 +28,11 @@ const login = {
     },
     methods: {
         async loginUser() {
-            const res = await fetch("http://127.0.0.1:5000/api/users/login", {
+            const res = await fetch(`http://127.0.0.1:5000/login?include_auth_token`, {
                 method: "post",
                 headers : {
                     "Content-Type" : "application/json",
-                    "Cache-Control": "no-store, no-cache"
-                    
+                    "Cache-Control": "no-store, no-cache"                    
                 },
                 body : JSON.stringify(this.formData)
             })
@@ -42,8 +43,10 @@ const login = {
                 console.log("Login successful 123:", data);
                 this.formData = data
                 this.success = true;
-                // console.log(data.id)
-                this.$router.push({ name: 'profile', params: { id: data.id } });                
+                
+                localStorage.setItem('Auth_token', data.response.user.authentication_token)
+                const id = data.response.user.id 
+                this.$router.push(`/profile/${id}`)                 
             }
             else {
                 const errorData = await res.json();
