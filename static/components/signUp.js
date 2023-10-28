@@ -2,7 +2,7 @@ const signUp={
     template : `
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 66vh;">
             
-            <form @submit.prevent="signUpUser" style="border: 2px solid #ccc; padding: 20px; border-radius: 10px; max-width: 300px;">
+            <form @submit.prevent="signUpUser" style="border: 2px solid grey; padding: 20px; border-radius: 10px; max-width: 300px;">
             <h3 style="text-align: center; ">Sign up</h3>  
             <label for="email" style="display: block; margin-bottom: 5px;">Email:</label>
             <input type="email" id="email" v-model="user.email" placeholder="email" required style="padding: 8px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 10px;" />

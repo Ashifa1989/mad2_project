@@ -46,6 +46,7 @@ const all_product = {
         
         </table>
       </div> 
+      
     </div>
     `,
   data() {
@@ -62,9 +63,7 @@ const all_product = {
 
 
       }],
-      Product: {
-
-      },
+      Product: {},
       success: true,
       error_message: "",
       message: ""

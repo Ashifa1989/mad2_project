@@ -1,6 +1,9 @@
+
+
 const all_category = {
   template: `
     <div >
+    
       <table class="table">
         <thead>
           <tr>
@@ -27,6 +30,7 @@ const all_category = {
             </tr>
            
         </tbody>
+        </table>
         <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
                   <div class="modal-content">
@@ -48,14 +52,14 @@ const all_category = {
                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                       <button type="button" @click="Create_update_category()" class="btn btn-primary">Save</button>
                     </div>
-                  </div>
-                </div>
               </div>
+          </div>
+        </div>
                         
-              <button type="button"  class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setcategory()" >
-                createCategory
-              </button>
-       </table>    
+      <button type="button"  class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setcategory()" >
+              Create Category
+      </button>       
+        
     </div>
     `,
   data() {

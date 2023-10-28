@@ -20,7 +20,7 @@ db.init_app(app)
 sec.init_app(app, user_datastore)
 
 
-@app.before_request  
+@app.before_first_request 
 def CreateDB():
     db.create_all()  
     if not user_datastore.find_role("Admin"):

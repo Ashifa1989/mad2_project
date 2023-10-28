@@ -1,6 +1,12 @@
 .leaf{
-    width:100px;
-    height: 100px;
+    width:100px; 
+    height:  40px;
     border-radius: 0 100%;
-    background-image: linear-gradient(to right, rgb(183, 244, 100), rgb(52,139,147));
+    text-align: center;
+    background-image: linear-gradient(to right, rgb(21, 241, 100), rgb(122, 46, 112));
 }
+.logo-container {
+    display: flex;
+    align-items: center;
+  }
+  

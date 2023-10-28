@@ -1,6 +1,6 @@
-from  flask_restful import Api, Resource, abort, fields, marshal_with, reqparse ,marshal
+from  flask_restful import Api, Resource,  fields, marshal_with, reqparse 
 from model import db, User as user_model, Role, Category, Product, Cart, Order, Order_item, RolesUsers, Address,Payment
-from flask_security  import   login_user , auth_required, roles_required, current_user
+from flask_security  import   auth_required, roles_required, current_user
 from flask import make_response
 from flask_security.utils import hash_password, verify_password 
 from werkzeug.exceptions import HTTPException
@@ -16,7 +16,8 @@ output_user_field = {
 
     # "email" : fields.String,
     # "password" : fields.String,
-    # "id": fields.Integer
+    "id": fields.Integer, 
+    
 }
 
 output_Category_field = {
@@ -34,8 +35,9 @@ output_product_field = {
     "Stock" : fields.Integer,
     "image_url" : fields.String,
     "manufacture_date" : fields.String,
-    "expairy_date" : fields.String,
-    # "timestamp" : fields.DateTime
+     "expairy_date" : fields.String,
+     "timestamp" : fields.DateTime,
+      "quantity" : fields.Integer
 
 }
 output_cart_field = {
@@ -44,11 +46,26 @@ output_cart_field = {
     "cart_id" : fields.Integer,
     "product_name" : fields.String,
     "Description" : fields.String,
-    "price_per_unit" : fields.Integer,
+    "price_per_unit" : fields.Float,
     "image_url" : fields.String,
-    "quantity" : fields.Integer
+    "quantity" : fields.Integer,
+    "total_price":fields.Float
 }
-
+output_address_field={
+    "address_id" : fields.Integer,
+    "user_id" : fields.Integer,
+    "username" : fields.String,
+    "street" : fields.String,
+    "state" : fields.String,
+    "postal_code" : fields.String,
+    "city":fields.String
+}
+output_payment_field={
+    "user_id":fields.Integer,
+    "card_number" : fields.Integer,
+    "cvv" :fields.Integer,
+    "expiry_date" : fields.String,
+}
 user_register_parser = reqparse.RequestParser()  # Create a RequestParser object
 user_register_parser.add_argument('username')     # Define the expected arguments
 user_register_parser.add_argument('password')
@@ -81,7 +98,7 @@ add_product_parser.add_argument("Stock")
 add_product_parser.add_argument("image_url")
 add_product_parser.add_argument("manufacture_date")
 add_product_parser.add_argument("expairy_date")
-# add_product_parser.add_argument("timestamp")
+add_product_parser.add_argument("timestamp")
 
 update_product_parser = reqparse.RequestParser()
 update_product_parser.add_argument("product_id")
@@ -93,7 +110,7 @@ update_product_parser.add_argument("Stock")
 update_product_parser.add_argument("image_url")
 update_product_parser.add_argument("manufacture_date")
 update_product_parser.add_argument("expairy_date")
-# update_product_parser.add_argument("timestamp")
+update_product_parser.add_argument("timestamp")
 
 
 search_parser = reqparse.RequestParser()  
@@ -111,16 +128,28 @@ cart_parser.add_argument("price_per_unit")
 cart_parser.add_argument("user_id")
 cart_parser.add_argument("cart_id")
 
+
 address_parser = reqparse.RequestParser()
-address_parser.add_argument(" street")
+
+address_parser.add_argument("username")
+address_parser.add_argument("street")
 address_parser.add_argument("city")
 address_parser.add_argument("state")
 address_parser.add_argument("postal_code")
 
+payment_parser=reqparse.RequestParser()
+payment_parser.add_argument("user_id")
+payment_parser.add_argument("card_number")
+payment_parser.add_argument("cvv")
+payment_parser.add_argument("expiry_date")
+
+order_parser=reqparse.RequestParser()
+order_parser.add_argument("selectedaddress")
+order_parser.add_argument("selectedpayment")
 
 
 
-
+    
 class AlreadyExistsError(HTTPException):
     def __init__(self, status_code, error_message):
         data = {"error_message": error_message}
@@ -131,9 +160,7 @@ class SchemaValidationError(HTTPException):
         data = {"error_message": error_message}
         self.response = make_response(json.dumps(data), status_code)
 
-
-class Users(Resource):
-    
+class Users(Resource):    
     @marshal_with(output_user_field)
     def get(self):
         all_user=user_model.query.all()
@@ -169,8 +196,9 @@ class UserApi(Resource):
     def get(self):
         id = current_user.id
         user=user_model.query.filter_by(id=id).first()
-        
+        print(user.roles[0])
         if user:
+            
             return user
         else:
              raise SchemaValidationError(status_code=404, error_message="user not found")
@@ -458,33 +486,56 @@ class search_category(Resource):
             return category
         
 class cart_Api(Resource):
+
     @marshal_with(output_cart_field)
     def get(self):
         user_id=current_user.id
-        cart=Cart.query.filter_by(user_id=user_id).all()
-        if cart:
-            return cart
+        #print(user_id)
+        carts=Cart.query.filter_by(user_id=user_id).all()
+        cart_data = []
+        for cart in carts:
+             
+            cart_data.append({
+                "cart_id": cart.cart_id,
+                "user_id": cart.user_id,
+                "product_id": cart.product.product_id,
+                "product_name": cart.product.product_name,
+                "image_url": cart.product.image_url,
+                "Description":cart.product.Description,
+                "price_per_unit": cart.product.price_per_unit,
+                "quantity": cart.quantity,
+                "total_price":cart.total_price
+            })
+        if cart_data:
+            return cart_data
         else:
             raise SchemaValidationError(status_code=404, error_message="There are no items in your cart ")
     
     # @marshal_with(output_cart_field)
+    @auth_required("token")
     def post(self):
+        user_id=current_user.id
+        #print(user_id)
         arg = cart_parser.parse_args()
         product_id=arg.get("product_id", None)
-        quantity = arg.get("quantity", 0)
+        quantity = int(arg.get("quantity", 0))
         user_id = current_user.id
         
-        
         product=Product.query.filter_by(product_id=product_id).first()
+
         if product is None:
             raise SchemaValidationError(status_code=404, error_message="sorry, No product found ")
+        cart=Cart.query.filter_by(product_id=product_id , user_id=user_id).first()
     
-        cart = Cart(product=product, quantity = quantity, user_id =user_id, price_per_unit = product.price_per_unit, total_price=(quantity*product.price_per_unit))
+        if cart:
+            cart.quantity= cart.quantity+quantity
+            cart.total_price = cart.quantity * cart.price_per_unit
         
-        
+        else:
+            cart = Cart(product_id = product.product_id, quantity = quantity, user_id =user_id, price_per_unit = product.price_per_unit, total_price=(quantity*product.price_per_unit))
+          
         db.session.add(cart)
         db.session.commit()
-        
         return {"message": "Successfully added to the cart."}
     
     
@@ -492,28 +543,27 @@ class cart_Api(Resource):
         print(cart_id)
         cart=Cart.query.filter_by(cart_id=cart_id).first()
         
-        if cart :
-            
-            db.session.delete(cart)
-        
-            db.session.commit()
-            
+        if cart :            
+            db.session.delete(cart)        
+            db.session.commit()            
             return ("successfully removed item from the cart", 200)
-            
         else:
             raise SchemaValidationError(status_code=404, error_message="product not found in cart")
         
 class Order_api(Resource):
     @marshal_with(output_cart_field)
-    def get (self, user_id):
+    def get (self):
+        user_id=current_user.id
         cart_items=Cart.query.filter_by(user_id=user_id).all()
         if cart_items is []:
              raise SchemaValidationError(status_code=404, error_message="sorry!! No items in your cart")
 
         return cart_items
-    def post(self, user_id):
-        # args= cart_parser.parse_args()
-        # user_id = args.get("user_id", None)
+    def post(self):
+        args= order_parser.parse_args()
+        payment=args.get("selectedpayment",None)
+        address=args.get("selectedaddress",None)
+        user_id = current_user.id
         cart_items=Cart.query.filter_by(user_id=user_id).all()
         print(cart_items)
         if cart_items == []:
@@ -521,20 +571,13 @@ class Order_api(Resource):
         total_price=0
         for item in cart_items:
             total_price=total_price+item.total_price
-        address = Address.query.join(user_model).filter_by(id=user_id).first()
-        if address is None:
-            raise SchemaValidationError(status_code=404, error_message="please add your address details")
-        else:
-            id=address.address_id
-        payment_detail= Payment.query.join(user_model).filter_by(id=user_id).first()
-        if payment_detail is None:
-            raise SchemaValidationError(status_code=404, error_message="please add your payment details")
-        else:
-            id= payment_detail.payment.id
+       
+        payment_id=payment.payment_id
+        address_id=address.address_id
         new_order = Order(user_id=user_id, total_price=total_price,  
                     order_date=datetime.now(),
-                    payment_id=id,
-                    address_id=id)
+                    payment_id=payment_id,
+                    address_id=address_id)
         db.session.add(new_order)
         db.session.commit()
         
@@ -550,11 +593,102 @@ class Order_api(Resource):
         db.session.commit()
         return {"message": "Order placed successfully"}, 200
 class address_api(Resource):
-    def get(self, user_id):
-        address = Address.query.join(user_model).filter_by(user_id=user_id).all()
+    @marshal_with(output_address_field)
+    def get(self):
+        user_id=current_user.id
+        address = Address.query.join(user_model).filter_by(id=user_id).all()
         return address
-    def post(self, user_id):
-        args = address_parser.parse_args()
+    def post(self):
+        user_id = current_user.id
+        args= address_parser.parse_args()
+        # username=args.get("username", None)
+        street=args.get("street", None)
+        city = args.get("city", None)
+        state = args.get("state",  None)
+        postal_code= args.get("postal_code", None)
+        address= Address(user_id=user_id, street=street, city=city, postal_code=postal_code, state=state)
+        
+        db.session.add(address)
+        db.session.commit()
+        return {"message":"succefully added the address"}, 200
+    def put(self,id):
+        user_id = current_user.id
+        args= address_parser.parse_args()
+        username=args.get("username", None)
+        street=args.get("street", None)
+        city = args.get("city", None)
+        # country=args.get("country",None)
+        state=args.get("state",None)
+        postal_code= args.get("postal_code", None)
+        update_address= Address.query.filter_by(address_id=id).first()
+        print(update_address)
+        update_address.user_id=user_id
+        update_address.street= street
+        update_address.city=city
+        update_address.postal_code=postal_code
+        
+        update_address.state=state
+        print(update_address.state)
+        
+        db.session.commit()
+        return {"message": "successfully updated address details"}
+
+    def delete(self,id):
+    
+        address=Address.query.filter_by(address_id=id).first()
+        if address:
+            db.session.delete(address)
+            
+            db.session.commit()
+            return {"message":"successfully removed address deatails"}
+        else:
+            raise SchemaValidationError(status_code="404", error_message="no address details found")
+
+
+class payment_api(Resource):
+    @marshal_with(output_payment_field)
+    def get(self):
+        user_id=current_user.id
+        payment=Payment.query.filter_by(user_id=user_id).all()
+        return payment
+    def post(self):
+        args=payment_parser.parse_args()
+        user_id=current_user.id
+        card_number=args.get("card_number",None)
+        cvv=args.get("cvv",None)
+        expiry_date=args.get("expiry_date",None)
+        payment=Payment(user_id=user_id, card_number=card_number,cvv=cvv,expiry_date=expiry_date)
+        db.session.add(payment)
+        db.session.commit()
+        return {"message": "successfully added the payment details"}
+    def put(self,id):
+        args=payment_parser.parse_args()
+        user_id=current_user.id
+        card_number=args.get("card_number",None)
+        cvv=args.get("cvv",None)
+        expiry_date=args.get("expiry_date",None)
+        update_payment=Payment.query.filter_by(payment_id=id).first()
+        update_payment.user_id=user_id
+        update_payment.card_number=card_number
+        update_payment.cvv=cvv
+        update_payment.expiry_date=expiry_date
+        db.session.commit()
+        return {"message": "succesfully update payment details"}
+    
+    def delete(self,id):
+        payment=Payment.query.filter_by(payment_id=id).first()
+        print(payment.payment_id)
+        
+        if payment:
+            db.session.delete(payment)
+            
+            db.session.commit()
+            return {"message":"successfully removed payment deatails"}
+        else:
+            raise SchemaValidationError(status_code="404", error_message="no payment details found")
+
+
+     
 
 
 api.add_resource(Users, "/users")
@@ -565,5 +699,7 @@ api.add_resource(products, "/product")
 api.add_resource(search_category, "/category/search")
 api.add_resource(Product_Api,  "/product/<int:id>", "/product/category/<string:category_name>")
 api.add_resource(search_product, "/product/search")
-api.add_resource(cart_Api,  "/cart/<int:cart_id>", "/cart/user")
-api.add_resource(Order_api, "/order/<int:user_id>")
+api.add_resource(cart_Api,  "/cart/<int:cart_id>", "/cart")
+api.add_resource(Order_api, "/order")
+api.add_resource(address_api, "/address", "/address/<int:id>")
+api.add_resource(payment_api, "/payment", "/payment/<int:id>")

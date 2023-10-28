@@ -1,20 +1,25 @@
 const login = { 
     template : `<div>
     
-    <form >
-    <label for="email">Email:</label>
-    <p><input type="email" name="email"   placeholder="email" v-model="formData.email" ></input></p>
-    <p><label for="password">Password:</label></p>
-    <p><input type="password" name="password" id="password" placeholder="password" v-model="formData.password" ></input></p>
-    <button @click.prevent="loginUser">LoginCustomer</button> 
-    <button @click.prevent="loginManager">LoginManager</button>
-    
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 66vh;">
+            
+    <form @submit.prevent="loginUser" style="border: 2px solid grey; padding: 20px; border-radius: 10px; max-width: 300px;">
+    <h3 style="text-align: center; ">Login</h3>  
+    <label for="email" style="display: block; margin-bottom: 5px;">Email:</label>
+    <input type="email" id="email" v-model="formData.email" placeholder="email" required style="padding: 8px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 10px;" />
+
+    <label for="password" style="display: block; margin-bottom: 5px;">Password:</label>
+    <input type="password" id="password"  placeholder="password" v-model="formData.password" required style="padding: 8px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 10px;" />
+
+    <button type="submit" style="padding: 8px 15px; background-color: green; color: white; border: none; border-radius: 5px; cursor: pointer;">Login</button>
     </form>
+    </div>
     
     <div v-if= "!success">
         {{ error_message }}
     </div>
     </div>`,
+    // props:[isLoggedIn],
     data() {
         return {
             formData: {
@@ -39,14 +44,19 @@ const login = {
                 console.log("Response status code:", res.status);
             
             if (res.ok){
+                console.log("i am here")
                 const data = await res.json()
-                console.log("Login successful 123:", data);
+                console.log("Login successful 123:", data)
                 this.formData = data
-                this.success = true;
-                
+                this.success = true
+
                 localStorage.setItem('Auth_token', data.response.user.authentication_token)
+                localStorage.setItem('user_id', data.response.user.id )
                 const id = data.response.user.id 
-                this.$router.push(`/profile/${id}`)                 
+                
+                
+                // isLoggedIn = true;
+                this.$router.push(`/profile`)                 
             }
             else {
                 const errorData = await res.json();
@@ -56,8 +66,5 @@ const login = {
             }
         },
     },
-   
-   
-
 }
 export default login

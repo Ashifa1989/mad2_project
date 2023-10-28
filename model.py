@@ -32,12 +32,13 @@ class User(db.Model,UserMixin):
     fs_uniquifier = db.Column(db.String(255), unique=True , nullable=False)
     roles = db.relationship('Role', secondary='roles_users',
                          backref=db.backref('users', lazy='dynamic'))
+    
 
-    def __init__(self, email, password,username,active):
+    def __init__(self, email, password,username,active,roles):
         self.username=username
         self.email = email
         self.active=active
-        #self.roles=roles
+        self.roles=roles
         self.password = password
         self.fs_uniquifier = generate_random_uniquifier()
 
@@ -65,7 +66,7 @@ class Product(db.Model):
     product_name = db.Column(db.String, unique=True, nullable=False)
     Description = db.Column(db.Text)
     Catagory_id = db.Column(db.Integer, db.ForeignKey('category.category_id'))
-    price_per_unit =  db.Column(db.Integer)
+    price_per_unit =  db.Column(db.Float)
     quantity = db.Column(db.Integer)
     Stock = db.Column(db.Integer)
     image_url = db.Column(db.Text, nullable=True)
@@ -80,7 +81,7 @@ class Cart(db.Model):
     cart_id = db.Column(db.Integer, primary_key=True, autoincrement= True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     product_id = db.Column(db.Integer, db.ForeignKey('product.product_id'))
-    price_per_unit =  db.Column(db.Integer)
+    price_per_unit = db.Column(db.Float)
     quantity = db.Column(db.Integer)
     total_price = db.Column(db.Float)
 
@@ -102,7 +103,7 @@ class Order_item(db.Model):
     order_item_id = db.Column(db.Integer, primary_key= True, autoincrement=True)
     order_id = db.Column(db.Integer, db.ForeignKey('order.order_id'))
     product_id = db.Column(db.Integer, db.ForeignKey('product.product_id'))
-    price_per_unit =  db.Column(db.Integer)
+    price_per_unit =  db.Column(db.Float)
     quantity = db.Column(db.Integer)
     total_price = db.Column(db.Float)
 
@@ -112,7 +113,7 @@ class Payment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'),nullable=False)
     card_number =db.Column(db.Integer)
     cvv=db.Column(db.Integer)
-    expiry_date = db.Column(db.Integer)
+    expiry_date = db.Column(db.String)
     
 class Address(db.Model):
     __tablename__ = "address" 
@@ -121,6 +122,7 @@ class Address(db.Model):
     street = db.Column(db.String)
     city = db.Column(db.String)
     state = db.Column(db.String)
+    # country=db.Column(db.String)
     postal_code = db.Column(db.String)
 
 class Promotion(db.Model):

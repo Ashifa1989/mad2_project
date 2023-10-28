@@ -9,18 +9,26 @@ import all_category from './components/all_category.js'
 import signUp from './components/signUp.js'
 import all_product from './components/all_product.js'
 import order from './components/order.js'
+import logout from './components/logout.js'
+import navbar from './components/navbar.js'
+import address from './components/address.js'
+import payment from './components/payment.js'
 
 const routes = [
     {path : '/', component : home},
     {path : '/signUp', component : signUp},
-    {path: '/profile/:id', name: 'profile', component: profile },
+    {path: '/profile', name: 'profile', component: profile },
     {path : '/login', component : login},
-    {path : '/cart/user/1',name: 'cart', component : cart},
+    {path : '/cart', name: 'Cart', component : cart, props : true},
     {path : '/search', component : search},
     {path : '/product/:id', component : product},
     {path : '/all_category', name:"all_category", component : all_category},
     {path : '/all_product', name:"all_product", component : all_product},
-    {path : '/order/:id', component : order},
+    {path : '/order', component : order},
+    {path : '/logout', component : logout},
+    {path : '/navbar', component : navbar},
+    {path : '/address', component : address},
+    {path : '/payment', component : payment}
 ]
 
 const router = new VueRouter({
@@ -31,15 +39,18 @@ const router = new VueRouter({
 const app = new Vue({
     el : "#app",
     router,
-    methods: {
-        async logout(){
-            const res =await fetch("/logout")
-            if(res.ok){
-                this.$router.push("/login")
-            }
-            else{
-                console.log("something went wrong. could not logout the user")
-            }
-        }
+    components:{
+        navbar
     }
+    // methods: {
+    //     async logout(){
+    //         const res =await fetch("/logout")
+    //         if(res.ok){
+    //             this.$router.push("/login")
+    //         }
+    //         else{
+    //             console.log("something went wrong. could not logout the user")
+    //         }
+    //     }
+    // }
 })
