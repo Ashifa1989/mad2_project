@@ -49,7 +49,22 @@ output_cart_field = {
     "price_per_unit" : fields.Float,
     "image_url" : fields.String,
     "quantity" : fields.Integer,
-    "total_price":fields.Float
+    "total_price":fields.Float,
+    
+}
+output_order_field={
+    "address_id": fields.Integer,
+    "payment_id" : fields.Integer,
+    "product_id" : fields.Integer,
+    "user_id" : fields.Integer,
+    "cart_id" : fields.Integer,
+    "product_name" : fields.String,
+    "Description" : fields.String,
+    "price_per_unit" : fields.Float,
+    "image_url" : fields.String,
+    "quantity" : fields.Integer,
+    "total_price":fields.Float,
+
 }
 output_address_field={
     "address_id" : fields.Integer,
@@ -62,10 +77,13 @@ output_address_field={
 }
 output_payment_field={
     "user_id":fields.Integer,
+    "payment_id":fields.Integer,
+    "type":fields.String,
     "card_number" : fields.Integer,
     "cvv" :fields.Integer,
     "expiry_date" : fields.String,
 }
+
 user_register_parser = reqparse.RequestParser()  # Create a RequestParser object
 user_register_parser.add_argument('username')     # Define the expected arguments
 user_register_parser.add_argument('password')
@@ -142,6 +160,7 @@ payment_parser.add_argument("user_id")
 payment_parser.add_argument("card_number")
 payment_parser.add_argument("cvv")
 payment_parser.add_argument("expiry_date")
+payment_parser.add_argument("type")
 
 order_parser=reqparse.RequestParser()
 order_parser.add_argument("selectedaddress")
@@ -551,18 +570,21 @@ class cart_Api(Resource):
             raise SchemaValidationError(status_code=404, error_message="product not found in cart")
         
 class Order_api(Resource):
-    @marshal_with(output_cart_field)
-    def get (self):
+    @marshal_with(output_order_field)
+    def get (self,order_id):
         user_id=current_user.id
-        cart_items=Cart.query.filter_by(user_id=user_id).all()
-        if cart_items is []:
+        order_items=Order.query.filter_by(order_id=order_id).all()
+        if order_items is []:
              raise SchemaValidationError(status_code=404, error_message="sorry!! No items in your cart")
 
-        return cart_items
+        return order_items
     def post(self):
         args= order_parser.parse_args()
+        print(args)
         payment=args.get("selectedpayment",None)
         address=args.get("selectedaddress",None)
+        print(address)
+        print(payment)
         user_id = current_user.id
         cart_items=Cart.query.filter_by(user_id=user_id).all()
         print(cart_items)
@@ -572,15 +594,14 @@ class Order_api(Resource):
         for item in cart_items:
             total_price=total_price+item.total_price
        
-        payment_id=payment.payment_id
-        address_id=address.address_id
+      
         new_order = Order(user_id=user_id, total_price=total_price,  
                     order_date=datetime.now(),
-                    payment_id=payment_id,
-                    address_id=address_id)
+                    payment_id=payment,
+                    address_id=address)
         db.session.add(new_order)
         db.session.commit()
-        
+        print(new_order.address_id)
         for cart_item in cart_items:
             order_item = Order_item(
                 order_id=new_order.order_id,  
@@ -654,10 +675,11 @@ class payment_api(Resource):
     def post(self):
         args=payment_parser.parse_args()
         user_id=current_user.id
+        type=args.get("type",None)
         card_number=args.get("card_number",None)
         cvv=args.get("cvv",None)
         expiry_date=args.get("expiry_date",None)
-        payment=Payment(user_id=user_id, card_number=card_number,cvv=cvv,expiry_date=expiry_date)
+        payment=Payment(user_id=user_id, card_number=card_number,cvv=cvv,expiry_date=expiry_date, type=type)
         db.session.add(payment)
         db.session.commit()
         return {"message": "successfully added the payment details"}
@@ -700,6 +722,6 @@ api.add_resource(search_category, "/category/search")
 api.add_resource(Product_Api,  "/product/<int:id>", "/product/category/<string:category_name>")
 api.add_resource(search_product, "/product/search")
 api.add_resource(cart_Api,  "/cart/<int:cart_id>", "/cart")
-api.add_resource(Order_api, "/order")
+api.add_resource(Order_api, "/order","/cart/<int:order_id>")
 api.add_resource(address_api, "/address", "/address/<int:id>")
 api.add_resource(payment_api, "/payment", "/payment/<int:id>")

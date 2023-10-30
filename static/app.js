@@ -1,8 +1,7 @@
-import home from './components/home.js'
 import profile from './components/profile.js'
 import login from './components/login.js'
 import cart from './components/cart.js'
-import search from './components/search.js'
+import home from './components/home.js'
 import product from './components/product.js'
 
 import all_category from './components/all_category.js'
@@ -20,11 +19,11 @@ const routes = [
     {path: '/profile', name: 'profile', component: profile },
     {path : '/login', component : login},
     {path : '/cart', name: 'Cart', component : cart, props : true},
-    {path : '/search', component : search},
+    {path : '/search', component : home},
     {path : '/product/:id', component : product},
     {path : '/all_category', name:"all_category", component : all_category},
     {path : '/all_product', name:"all_product", component : all_product},
-    {path : '/order', component : order},
+    {path : '/order/:id', component : order},
     {path : '/logout', component : logout},
     {path : '/navbar', component : navbar},
     {path : '/address', component : address},

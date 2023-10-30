@@ -1,25 +1,22 @@
+import { useGetAddresses } from './addressService.js'
 const address = {
     template: `
 <div> 
-    <div>
-        <h2>Select Delivery Address</h2>
-        <select v-model="selectedAddress">
-        <option value="">Select an address</option>
-        <option v-for="address in addressOptions" :key="address.address_id" :value="address.address_id">{{ address.postal_code }},{{ address.street }}, {{ address.city }}, {{ address.state }}</option>
-        </select>
-    </div>
     <div class="row row-cols-1 row-cols-md-4 g-4">
         <div v-if="success" v-for="address in addresses">
             <div class="col">
                 <div class="card h-100">
-                    <div>{{ address.street }}</div>
-                    <div>{{ address.city }}</div>
-                    <div>{{ address.state }}</div>
+                    <div class="card-body">
+                        <div>{{ address.street }}</div>
+                        <div>{{ address.city }}</div>
+                        <div>{{ address.state }}</div>
 
-                    <div>{{ address.postal_code }}</div>
-
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setSelectedAddress(address)"> Update</button>
-                    <button class="btn btn-primary" @click.prevent="deleteAddress(address.address_id)">Delete</button>
+                        <div>{{ address.postal_code }}</div>
+                    </div>
+                    <div class="card-footer">
+                    <button type="button" class="btn btn-primary col-md-5" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setSelectedAddress(address)"> Update</button>
+                    <button class="btn btn-secondary col-md-5" @click.prevent="deleteAddress(address.address_id)">Delete</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -49,8 +46,6 @@ const address = {
                         <label for="postal_code" class="form-label">Postal code:</label>
                         <input type="text" class="form-control" id="stock" v-model="address.postal_code" placeholder="Enter postal code"></input>
                     </div>
-                    <label for="country" class="form-label">country:</label>
-                    <input type="text" class="form-control" id="Name" placeholder="Enter country name" v-model="address.country" required></input>
                 </div>
                 <div class="modal-footer">
                   <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -81,31 +76,7 @@ const address = {
             error_message: "",
         }
     },
-    props: {
-        addressOptions: Array, // The available address options passed as a prop
-    },
     methods: {
-        async getAddress() {
-            const res = await fetch(`http://127.0.0.1:5000/api/address`, {
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authentication-Token": localStorage.getItem("Auth_token")
-
-                },
-            })
-            console.log(res.status)
-            if (res.ok) {
-                const data = await res.json()
-                this.success = true
-                this.addresses = data
-
-            }
-            else {
-                const errorData = await res.json()
-                this.success = false
-                this.error_message = errorData.error_message
-            }
-        },
         async Add_update_address() {
 
             if (this.address.address_id == 0) {
@@ -117,16 +88,9 @@ const address = {
                         "Authentication-Token": localStorage.getItem("Auth_token")
                     },
                     body: JSON.stringify(this.address)
-
                 })
                 if (res.ok) {
-
-                    const res = await fetch("http://127.0.0.1:5000/api/address");
-                    if (res.ok) {
-                        const data = await res.json();
-                        this.addresses = data;
-                        this.message = data.message
-                    }
+                    this.addresses = await this.getAddress()
                 }
                 else {
                     const errorData = await res.json()
@@ -146,16 +110,11 @@ const address = {
 
                 })
                 if (res.ok) {
-                    const res = await fetch("http://127.0.0.1:5000/api/address");
-                    if (res.ok) {
-                        const data = await res.json();
-                        this.addresses = data;
-                    }
-                    else {
-                        const errorData = await res.json()
-                        this.success = false
-                        this.error_message = errorData.error_message
-                    }
+                    this.addresses = await this.getAddress()
+                } else {
+                    const errorData = await res.json()
+                    this.success = false
+                    this.error_message = errorData.error_message
                 }
 
             }
@@ -167,23 +126,16 @@ const address = {
                     "Content-Type": "application/json",
                     "Authentication-Token": localStorage.getItem("Auth_token")
                 },
-
             })
             if (response.ok) {
                 console.log("deleted the address details successfully")
-                const response = await fetch("http://127.0.0.1:5000/api/address");
-                if (response.ok) {
-                    const data = await response.json();
-                    this.addresses = data;
-                }
+                this.addresses = await this.getAddress()
             }
             else {
-
                 const errorData = await response.json();
                 this.message = errorData.error_message;
             }
         },
-
         async setSelectedAddress(selAddress) {
             this.address = selAddress;
         },
@@ -191,13 +143,13 @@ const address = {
             // console.log("hi")
             this.address = {};
             this.address.address_id = 0;
-        },
-        async onAddressSelected() {
-            this.$emit('addressSelected', this.selectedAddress);
-        },
+        }
     },
-    mounted() {
-        this.getAddress()
+    created() {
+        this.getAddress = useGetAddresses
+    },
+    async mounted() {
+        this.addresses = await this.getAddress()
     }
 }
 

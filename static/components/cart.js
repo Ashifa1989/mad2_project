@@ -1,3 +1,6 @@
+import { useGetAddresses } from './addressService.js'
+import { useGetPayments } from './paymentService.js';
+
 const cart = {
   template: `
   <div class="container">
@@ -30,6 +33,8 @@ const cart = {
           </li>
         </ul>
       </div>
+
+
       <div class="col-md-7 col-lg-8">
         <h4 class="mb-3">Shipping address</h4>
 
@@ -41,11 +46,10 @@ const cart = {
           </select>
         </div>
 
-        <form class="needs-validation" novalidate>
-          <div class="row g-3">
+        <div class="row g-3">
             <div class="col-8">
-              <label for="address2" class="form-label">City </label>
-              <input type="text" class="form-control" id="address2" placeholder="City" v-model="address.city">
+              <label for="city" class="form-label">City </label>
+              <input type="text" class="form-control" id="city" placeholder="City" v-model="address.city">
             </div>
 
             <div class="col-md-5">
@@ -57,55 +61,43 @@ const cart = {
               <label for="zip" class="form-label">Post code</label>
               <input type="text" class="form-control" id="postcode1" placeholder="" v-model="address.postal_code">
             </div>
-          </div>
-
+        </div>
+        
           <hr class="my-4">
 
           <h4 class="mb-3">Payment method</h4>
-
-          <div class="my-3">
-            <div class="form-check">
-              <input id="credit" name="paymentMethod" type="radio" class="form-check-input" checked required>
-              <label class="form-check-label" for="credit">Credit card</label>
-            </div>
-            <div class="form-check">
-              <input id="debit" name="paymentMethod" type="radio" class="form-check-input" required>
-              <label class="form-check-label" for="debit">Debit card</label>
-            </div>
-            <div class="form-check">
-              <input id="paypal" name="paymentMethod" type="radio" class="form-check-input" required>
-              <label class="form-check-label" for="paypal">PayPal</label>
-            </div>
-          </div>
-
-          <div class="row gy-3">
-            <div class="col-md-6">
-              <label for="cc-name" class="form-label">Name on card</label>
-              <input type="text" class="form-control" id="cc-name" placeholder="" >
-            </div>
-
+          <div class="col-md-8">
+          <select class="form-select" id="state" required  @change="setSelectedPayments($event)">
+            <option value="">Select address</option>
+            <option v-for="pay in payments" :value="pay.payment_id" :key="pay.payment_id">{{ pay.type }}</option>
+                    
+          </select>
+        </div>
+        
+        <div class="row gy-3">
             <div class="col-md-6">
               <label for="cc-number" class="form-label">Credit card number</label>
-              <input type="text" class="form-control" id="cc-number" placeholder="" >
+              <input type="text" class="form-control" id="cc-number" placeholder="" v-model="payment.card_number">
             </div>
 
             <div class="col-md-3">
               <label for="cc-expiration" class="form-label">Expiration</label>
-              <input type="text" class="form-control" id="cc-expiration" placeholder="" >
+              <input type="text" class="form-control" id="cc-expiration" placeholder="" v-model="payment.expiry_date">
               
             </div>
 
             <div class="col-md-3">
               <label for="cc-cvv" class="form-label">CVV</label>
-              <input type="text" class="form-control" id="cc-cvv" placeholder="">
+              <input type="text" class="form-control" id="cc-cvv" placeholder="" v-model="payment.cvv">
               
             </div>
           </div>
 
           <hr class="my-4">
-
-          <button class="w-100 btn btn-primary btn-lg" type="submit">Continue to checkout</button>
-        </form>
+          <button class="w-30 btn btn-secondary btn-lg col-md-3" type="button" @click.prevent="countinue_shopping" >Continue shopping</button>
+          <button class="w-70 btn btn-primary btn-lg col-md-8" type="button" @click.prevent="checkout">Checkout</button>
+          
+        
       </div>
     </div>
   </main>
@@ -125,37 +117,24 @@ const cart = {
       success: true,
       cart_total_amount: 0,
       address: {},
+      payment:{},
       error_message: "To add to your trolley, you'll need an account.",
-      addresses: []
+      addresses: [],
+      payments:[]
     }
   },
 
   methods: {
     setSelectedAddress(event){
       //console.log(this.address)
-      let selectedAddId = event.target.value;
+      const selectedAddId = event.target.value;
       this.address = this.addresses.filter((a)=> a.address_id == selectedAddId)[0]
       
       //console.log(this.address)
     },
-    async getAddresses() {
-      const res = await fetch(`http://127.0.0.1:5000/api/address`, {
-        headers: {
-          "Content-Type": "application/json",
-          "Authentication-Token": localStorage.getItem("Auth_token")
-        },
-      })
-      //console.log(res.status)
-      if (res.ok) {
-        const data = await res.json()
-        this.success = true
-        this.addresses = data
-      }
-      else {
-        const errorData = await res.json()
-        this.success = false
-        this.error_message = errorData.error_message
-      }
+    setSelectedPayments(event){
+        const selectedpaymentId=event.target.value;
+        this.payment = this.payments.filter((a) => a.payment_id == selectedpaymentId)[0]
     },
     async getCart() {
       const res = await fetch(`http://127.0.0.1:5000/api/cart`, {
@@ -200,16 +179,44 @@ const cart = {
         this.message = errorData.error_message;
       }
     },
-
     async countinue_shopping() {
       this.$router.push('/search')
+    },
+    async checkout(){
+     
+      console.log("add_id",this.address.address_id)
+      console.log("pay_id",this.payment.payment_id)
+      const res = await fetch("http://127.0.0.1:5000/api/order", {
+                    method: "post",
+                    headers: {
+                        "content-type": "application/json",
+                        "Authentication-Token": localStorage.getItem("Auth_token")
+                    },
+                    body: JSON.stringify(this.address, this.payment )
+                })
+                console.log(res.status)
+                if (res.ok) {
+                    const data=await res.json()
+                    id=data.order_id
+                    this.$router.push('/order/${id}')
+
+                    this.message = console.log("your order is successful.thank you for shopping with us ")
+                }
+                else {
+                    const errorData = await res.json()
+                    this.success = false
+                    this.error_message = errorData.error_message
+                }
     }
   },
-
-  mounted() {
+  created(){
+    this.getAddress = useGetAddresses
+    this.getpayments= useGetPayments
+  },
+  async mounted() {
     this.getCart()
-    this.getAddresses()
-    //console.log(UserId)
+    this.addresses = await this.getAddress()
+    this.payments= await this.getpayments()
   }
 }
 

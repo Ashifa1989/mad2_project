@@ -111,6 +111,7 @@ class Payment(db.Model):
     __tablename__ = "payment"  
     payment_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'),nullable=False)
+    type=db.Column(db.Integer)
     card_number =db.Column(db.Integer)
     cvv=db.Column(db.Integer)
     expiry_date = db.Column(db.String)
@@ -122,7 +123,6 @@ class Address(db.Model):
     street = db.Column(db.String)
     city = db.Column(db.String)
     state = db.Column(db.String)
-    # country=db.Column(db.String)
     postal_code = db.Column(db.String)
 
 class Promotion(db.Model):
