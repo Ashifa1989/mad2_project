@@ -23,7 +23,7 @@ const product = {
         </div>
         <div class="mb-3">   
             <label for="stock" class="form-label" >Stock:</label>
-            <input type="text" class="form-control"  id="stock" v-model="product.stock" placeholder="Product In Stock"></input>
+            <input type="text" class="form-control"  id="stock" v-model="product.Stock" placeholder="Product In Stock"></input>
         </div>
         <div class="mb-3">   
             <label for="image_url" class="form-label" >Image_url:</label>
@@ -39,7 +39,8 @@ const product = {
         </div>
         <button type="button" @click="create_update_Product()" class="btn btn-primary">Save Product</button>
         
-    </form>    
+    </form>  
+    
     </div>`,
     data() {
         return {
@@ -76,7 +77,7 @@ const product = {
         },
 
         async getProductDetails() {
-            console.log(this.$route.params.id)
+            
             this.selectedproductId = this.$route.params.id
             if (this.selectedproductId > 0) {
                 //get product details from api using productId and assignb to this.product
@@ -138,6 +139,7 @@ const product = {
                 }
             }
         },
+        
     },
     mounted() {
         this.getProductDetails();

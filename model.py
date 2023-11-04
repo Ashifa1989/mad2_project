@@ -30,15 +30,16 @@ class User(db.Model,UserMixin):
     password = db.Column(db.String(255), nullable=False)
     active = db.Column(db.Boolean())
     fs_uniquifier = db.Column(db.String(255), unique=True , nullable=False)
+    # timestamp = db.Column(db.DateTime)
     roles = db.relationship('Role', secondary='roles_users',
                          backref=db.backref('users', lazy='dynamic'))
     
 
-    def __init__(self, email, password,username,active,roles):
+    def __init__(self, email, password,username,active):
         self.username=username
         self.email = email
         self.active=active
-        self.roles=roles
+        # self.roles=roles
         self.password = password
         self.fs_uniquifier = generate_random_uniquifier()
 
@@ -75,7 +76,7 @@ class Product(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     promotions = db.relationship('Promotion', backref='product', cascade='all, delete') # one to many relationship btw product and promotion
     carts = db.relationship('Cart', backref='product')
-
+    
 class Cart(db.Model):
     __tablename__ = "cart"
     cart_id = db.Column(db.Integer, primary_key=True, autoincrement= True)
@@ -87,7 +88,7 @@ class Cart(db.Model):
 
     # category = db.relationship("Category", backref='cart', cascade ='all, delete') #one to many relation btw cart and catogory
      # one to many relation btw cart and product
-
+    
 class Order(db.Model):
     __tablename__ = "order" 
     order_id = db.Column(db.Integer, primary_key=True, autoincrement= True)
@@ -97,6 +98,9 @@ class Order(db.Model):
     order_date = db.Column(db.DateTime, default=datetime.utcnow)
     payment_id = db.Column(db.Integer, db.ForeignKey('payment.payment_id'))
     address_id =db.Column(db.Integer, db.ForeignKey('address.address_id'))
+    order_items =db.relationship('Order_item', backref='order')
+    address=db.relationship("Address")
+    payment=db.relationship("Payment")
 
 class Order_item(db.Model):
     __tablename__ = "order_item" 
@@ -106,6 +110,7 @@ class Order_item(db.Model):
     price_per_unit =  db.Column(db.Float)
     quantity = db.Column(db.Integer)
     total_price = db.Column(db.Float)
+    product=db.relationship('Product')
 
 class Payment(db.Model):
     __tablename__ = "payment"  

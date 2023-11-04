@@ -20,7 +20,7 @@ const login = {
         {{ error_message }}
     </div>
 </div>`,
-  // props:[isLoggedIn],
+
   data() {
     return {
       formData: {
@@ -32,6 +32,8 @@ const login = {
       error_message: "something went wrong"
     }
   },
+  props: ['isLoggedIn'],
+
   methods: {
     async loginUser() {
       const res = await fetch(`http://127.0.0.1:5000/login?include_auth_token`, {
@@ -53,9 +55,32 @@ const login = {
 
         localStorage.setItem('Auth_token', data.response.user.authentication_token)
         localStorage.setItem('user_id', data.response.user.id)
-        const id = data.response.user.id
-        // isLoggedIn = true;
-        this.$router.push('/search')
+
+        const response = await fetch(`http://127.0.0.1:5000/api/user`, {
+          headers: {
+            "Content-Type": "application/json",
+            "Authentication-Token": localStorage.getItem("Auth_token")
+          }
+        })
+
+        if (response.ok) {
+          this.$emit('userLoggedInEvent')
+          const userdata = await response.json()
+          console.log(userdata.roles)
+          if (userdata.roles.some(r => r.name == 'Manager')) {
+            this.$router.push('/all_product')
+          }
+          else if (userdata.roles.some(r => r.name == 'Admin')) {
+            console.log("Inside admin role")
+            this.$router.push('/all_category')
+          }
+          else {
+            this.$router.push('/home')
+          }
+        }
+        else {
+          console.log("no role found")
+        }
       }
       else {
         const errorData = await res.json();
@@ -66,5 +91,6 @@ const login = {
     },
   },
 }
+
 
 export default login

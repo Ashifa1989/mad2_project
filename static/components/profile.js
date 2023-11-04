@@ -4,6 +4,7 @@ const profile = {
     <div> 
       <div v-if="success">
         <h2> Welcome {{ profile.username }} !! </h2>
+        <button @click.prevent="trigger_celery_task">triggercelerytask</button>
         <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">Toggle right offcanvas</button>
 
         <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
@@ -36,10 +37,10 @@ const profile = {
             error_message : "something went wrong"
         }
     },
-    // components:{
-    //     address
-    // },
-    // props:['id'],
+    methods:{
+        
+
+    },
 
     async mounted(){
         

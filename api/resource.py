@@ -9,6 +9,11 @@ from datetime import datetime
 
 
 
+
+
+from celery.result import AsyncResult
+from flask import send_file
+
 api = Api(prefix="/api")
 
 output_user_field = {
@@ -17,6 +22,9 @@ output_user_field = {
     # "email" : fields.String,
     # "password" : fields.String,
     "id": fields.Integer, 
+    "roles": fields.List(fields.Nested({
+        "name": fields.String
+    }))
     
 }
 
@@ -38,8 +46,8 @@ output_product_field = {
      "expairy_date" : fields.String,
      "timestamp" : fields.DateTime,
       "quantity" : fields.Integer
-
 }
+
 output_cart_field = {
     "product_id" : fields.Integer,
     "user_id" : fields.Integer,
@@ -49,23 +57,26 @@ output_cart_field = {
     "price_per_unit" : fields.Float,
     "image_url" : fields.String,
     "quantity" : fields.Integer,
-    "total_price":fields.Float,
-    
+    "total_price":fields.Float,  
 }
+
 output_order_field={
     "address_id": fields.Integer,
     "payment_id" : fields.Integer,
-    "product_id" : fields.Integer,
+    "order_id" : fields.Integer,
     "user_id" : fields.Integer,
-    "cart_id" : fields.Integer,
-    "product_name" : fields.String,
-    "Description" : fields.String,
+    "total_price":fields.Float,
+    "address": fields.Nested ({"street" : fields.String, "city" : fields.String , "state" : fields.String , "postal_code" : fields.String}),
+    "payment": fields.Nested ({"type": fields.String }),
+    "order_items" : fields.List (fields.Nested({
+    "product_id" : fields.Integer,
+    "order_id":fields.Integer,
     "price_per_unit" : fields.Float,
-    "image_url" : fields.String,
     "quantity" : fields.Integer,
     "total_price":fields.Float,
-
+    "product":fields.Nested({"product_name" : fields.String, "image_url" : fields.String,})}))
 }
+
 output_address_field={
     "address_id" : fields.Integer,
     "user_id" : fields.Integer,
@@ -166,9 +177,6 @@ order_parser=reqparse.RequestParser()
 order_parser.add_argument("selectedaddress")
 order_parser.add_argument("selectedpayment")
 
-
-
-    
 class AlreadyExistsError(HTTPException):
     def __init__(self, status_code, error_message):
         data = {"error_message": error_message}
@@ -206,8 +214,6 @@ class Users(Resource):
     #             raise SchemaValidationError(status_code=404, error_message="Invalid username or password")          
     #     else:
     #         raise SchemaValidationError(status_code=404, error_message="Invalid username or password")
-        
-
 
 class UserApi(Resource):    
     @auth_required("token")
@@ -215,16 +221,15 @@ class UserApi(Resource):
     def get(self):
         id = current_user.id
         user=user_model.query.filter_by(id=id).first()
-        print(user.roles[0])
+        # print(user.roles[0])
         if user:
-            
             return user
         else:
              raise SchemaValidationError(status_code=404, error_message="user not found")
             
     def post(self): #register
         args = user_register_parser.parse_args()
-        print(args)
+        # print(args)
         user_name = args.get("username", None)
         password = args.get("password",None)
         email= args.get("email", None)
@@ -290,7 +295,7 @@ class UserApi(Resource):
 class manager_api(Resource):
     def post(self):
         args = user_register_parser.parse_args()
-        print(args)
+        # print(args)
         user_name = args.get("username", None)
         password = args.get("password",None)
         email= args.get("email", None)
@@ -299,12 +304,25 @@ class manager_api(Resource):
             raise AlreadyExistsError(
                 status_code=409,  error_message="username  already exists")
         
-        new_user = user_model(username = user_name, password = hash_password(password), email=email, fs_uniquifier = user_name, roles="Manager")
-        " what to fill here for manger to get approval from admin"
+        new_user = user_model(email, hash_password(password), user_name, False)
 
         db.session.add(new_user)
         db.session.commit()
-        return ("Successfully created new user", 200)
+        manager_role = Role.query.filter_by(name = "Manager" ).first()
+        customer_role = Role.query.filter_by(name="Customer").first()
+        role_manager = RolesUsers(user_id= new_user.id, role_id= manager_role.id )
+        role_customer=RolesUsers(user_id= new_user.id, role_id=customer_role.id)
+
+        db.session.add(role_manager)
+        db.session.add(role_customer)
+        db.session.commit()
+        
+    
+        return {"message" :"Successfully created the acoount.please wait for the Admin approval"},200
+    
+    
+              
+        
 
 
 class Categories(Resource):
@@ -319,10 +337,10 @@ class Categories(Resource):
     def post(self):
         args= add_category_parser.parse_args()
         category_name = args.get("category_name", None)
-        print(category_name)
+        # print(category_name)
         image = args.get("imagelink", None)
         category =  Category.query.filter_by(category_name=category_name).first()
-        print(category)
+        # print(category)
         if category:
             raise AlreadyExistsError(
                 status_code=409,  error_message="category  already exists")
@@ -367,10 +385,7 @@ class CategoryApi(Resource):
 class products(Resource):
     @marshal_with(output_product_field)
     def get(self):
-
-        
         product = Product.query.order_by(Product.timestamp.desc()).all()  # Sort by timestamp
-        
         return product
 
     # @marshal_with(output_product_field)
@@ -409,7 +424,7 @@ class Product_Api(Resource):
         
         product = Product.query.filter_by(product_id=id).first()
         
-        print(product)
+        # print(product)
         if product is None:
              raise SchemaValidationError(status_code=404, error_message="sorry!! No product  found")
         return product
@@ -497,7 +512,7 @@ class search_category(Resource):
         
         args=search_parser.parse_args()
         search_word=args.get("search_word", None)
-        print(search_word)
+        # print(search_word)
         
         if search_word:
             search = f"%{search_word}%"
@@ -530,7 +545,7 @@ class cart_Api(Resource):
         else:
             raise SchemaValidationError(status_code=404, error_message="There are no items in your cart ")
     
-    # @marshal_with(output_cart_field)
+    @marshal_with(output_cart_field)
     @auth_required("token")
     def post(self):
         user_id=current_user.id
@@ -555,11 +570,11 @@ class cart_Api(Resource):
           
         db.session.add(cart)
         db.session.commit()
-        return {"message": "Successfully added to the cart."}
+        return cart
     
     
     def delete(self, cart_id) :
-        print(cart_id)
+        # print(cart_id)
         cart=Cart.query.filter_by(cart_id=cart_id).first()
         
         if cart :            
@@ -570,38 +585,53 @@ class cart_Api(Resource):
             raise SchemaValidationError(status_code=404, error_message="product not found in cart")
         
 class Order_api(Resource):
+
     @marshal_with(output_order_field)
     def get (self,order_id):
         user_id=current_user.id
-        order_items=Order.query.filter_by(order_id=order_id).all()
-        if order_items is []:
-             raise SchemaValidationError(status_code=404, error_message="sorry!! No items in your cart")
+        orderObject=Order.query.filter_by(order_id=order_id).first()
 
-        return order_items
+        if orderObject is None:
+             raise SchemaValidationError(status_code=404, error_message="sorry!! No order found")
+        # items=[]
+        # for item in orderObject:
+        #     items.append ({
+        #         "product_name": item.product.product_name,
+        #         "quantity":item.quantity,
+        #         "price_per_unit":item.price_per_unit,
+        #         "total_price":item.total_price,
+        #         "order_id":item.order_id
+        #     })
+
+        # return items
+
+        return orderObject
+    
+    @marshal_with(output_order_field)
     def post(self):
         args= order_parser.parse_args()
-        print(args)
+        # print(args)
         payment=args.get("selectedpayment",None)
         address=args.get("selectedaddress",None)
-        print(address)
-        print(payment)
+        # print(address)
+        # print(payment)
         user_id = current_user.id
         cart_items=Cart.query.filter_by(user_id=user_id).all()
-        print(cart_items)
+        # print(cart_items)
         if cart_items == []:
             raise SchemaValidationError(status_code=404, error_message="there is no item in cart ") 
         total_price=0
         for item in cart_items:
             total_price=total_price+item.total_price
-       
-      
+            item.product.Stock=item.product.Stock-item.quantity
+        # print(item.product.Stock)
         new_order = Order(user_id=user_id, total_price=total_price,  
                     order_date=datetime.now(),
                     payment_id=payment,
                     address_id=address)
         db.session.add(new_order)
         db.session.commit()
-        print(new_order.address_id)
+        # print(new_order.address_id)
         for cart_item in cart_items:
             order_item = Order_item(
                 order_id=new_order.order_id,  
@@ -609,10 +639,13 @@ class Order_api(Resource):
                 quantity=cart_item.quantity,
                 price_per_unit=cart_item.price_per_unit,
                 total_price=cart_item.total_price)
+            
             db.session.add(order_item)
-            db.session.delete(cart_item)  
+            db.session.delete(cart_item) 
+         
         db.session.commit()
-        return {"message": "Order placed successfully"}, 200
+        return order_item
+    
 class address_api(Resource):
     @marshal_with(output_address_field)
     def get(self):
@@ -632,6 +665,7 @@ class address_api(Resource):
         db.session.add(address)
         db.session.commit()
         return {"message":"succefully added the address"}, 200
+    
     def put(self,id):
         user_id = current_user.id
         args= address_parser.parse_args()
@@ -642,14 +676,14 @@ class address_api(Resource):
         state=args.get("state",None)
         postal_code= args.get("postal_code", None)
         update_address= Address.query.filter_by(address_id=id).first()
-        print(update_address)
+        # print(update_address)
         update_address.user_id=user_id
         update_address.street= street
         update_address.city=city
         update_address.postal_code=postal_code
         
         update_address.state=state
-        print(update_address.state)
+        # print(update_address.state)
         
         db.session.commit()
         return {"message": "successfully updated address details"}
@@ -699,7 +733,7 @@ class payment_api(Resource):
     
     def delete(self,id):
         payment=Payment.query.filter_by(payment_id=id).first()
-        print(payment.payment_id)
+        # print(payment.payment_id)
         
         if payment:
             db.session.delete(payment)
@@ -709,8 +743,51 @@ class payment_api(Resource):
         else:
             raise SchemaValidationError(status_code="404", error_message="no payment details found")
 
+class Admin_approval(Resource):
+    @marshal_with(output_user_field)
+    def get(self):
+        inactive_manger= user_model.query.filter_by(active=False).all()
+        return inactive_manger
+    def put(self, id):
+        manager=user_model.query.filter_by(id=id).first()
+        manager.active=True
+        db.session.commit()
+        return {"message" : "manager role approved from admin"}, 200
+class Admin_reject(Resource):
+    def put(self, id):
+        manager=user_model.query.filter_by(id=id).first()
+        manager.active=True
+        manager_role = Role.query.filter_by(name="Manager").first()
+        if manager_role is not None:
+            role = RolesUsers.query.filter_by(user_id=manager.id, role_id=manager_role.id).first()
 
-     
+            if role is not None:
+                db.session.delete(role)  
+                db.session.commit()
+                return {"message" : "manager role rejected from admin"}, 200
+
+       
+
+# class celeryTask(Resource):
+#     def get(self):
+#         a=tasks.generate_productDetails_csv.delay()
+#         return{
+#             "task_id": a.id,
+#             "task_state" :a.state,
+#             "task_result": a.result
+#         }
+# class CeleryTaskStatus(Resource):
+#     def get(self, task_id):
+#         task = AsyncResult(task_id)
+#         return {
+#             "task_id": task.id,
+#             "task_state": task.state,
+#             "task_result": task.result
+#         }
+    
+# class download_file(Resource):
+#     def get(self):
+#         return send_file("static/product_data.csv")
 
 
 api.add_resource(Users, "/users")
@@ -722,6 +799,14 @@ api.add_resource(search_category, "/category/search")
 api.add_resource(Product_Api,  "/product/<int:id>", "/product/category/<string:category_name>")
 api.add_resource(search_product, "/product/search")
 api.add_resource(cart_Api,  "/cart/<int:cart_id>", "/cart")
-api.add_resource(Order_api, "/order","/cart/<int:order_id>")
+api.add_resource(Order_api, "/order","/order/<int:order_id>")
 api.add_resource(address_api, "/address", "/address/<int:id>")
 api.add_resource(payment_api, "/payment", "/payment/<int:id>")
+# api.add_resource(celeryTask, "/trigger-celery-task")
+# api.add_resource(CeleryTaskStatus, "/status/<int:task_id>")
+# api.add_resource(download_file, "/download-file")
+api.add_resource(manager_api,  "/manager/register")
+api.add_resource(Admin_approval, "/Admin_approval", "/Admin_approval/<int:id>")
+api.add_resource(Admin_reject,  "/Admin_reject/<int:id>")
+
+

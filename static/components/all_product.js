@@ -46,7 +46,7 @@ const all_product = {
         
         </table>
       </div> 
-      
+      <button @click="trigger_celery_task">trigger celery job</button>  
     </div>
     `,
   data() {
@@ -110,6 +110,14 @@ const all_product = {
         this.error_message = errorData.error_message;
       }
     },
+    async trigger_celery_task(){
+      const res=await fetch("/trigger-celery-task")
+      if(res.ok){
+          const data= await res.json()
+          console.log("details of celery job", data)
+          window.location.href="/download-file"
+      }
+  },
     async openProductDetails(id) {
       this.$router.push(`/product/${id}`)      
     },

@@ -68,8 +68,8 @@ const cart = {
           <h4 class="mb-3">Payment method</h4>
           <div class="col-md-8">
           <select class="form-select" id="state" required  @change="setSelectedPayments($event)">
-            <option value="">Select address</option>
-            <option v-for="pay in payments" :value="pay.payment_id" :key="pay.payment_id">{{ pay.type }}</option>
+            <option value="">Select payment</option>
+            <option v-for="pay in payments" :value="pay.payment_id" :key="pay.payment_id">{{pay.card_number}}({{ pay.type }})</option>
                     
           </select>
         </div>
@@ -97,7 +97,6 @@ const cart = {
           <button class="w-30 btn btn-secondary btn-lg col-md-3" type="button" @click.prevent="countinue_shopping" >Continue shopping</button>
           <button class="w-70 btn btn-primary btn-lg col-md-8" type="button" @click.prevent="checkout">Checkout</button>
           
-        
       </div>
     </div>
   </main>
@@ -117,24 +116,24 @@ const cart = {
       success: true,
       cart_total_amount: 0,
       address: {},
-      payment:{},
+      payment: {},
       error_message: "To add to your trolley, you'll need an account.",
       addresses: [],
-      payments:[]
+      payments: []
     }
   },
 
   methods: {
-    setSelectedAddress(event){
+    setSelectedAddress(event) {
       //console.log(this.address)
       const selectedAddId = event.target.value;
-      this.address = this.addresses.filter((a)=> a.address_id == selectedAddId)[0]
-      
+      this.address = this.addresses.filter((a) => a.address_id == selectedAddId)[0]
+
       //console.log(this.address)
     },
-    setSelectedPayments(event){
-        const selectedpaymentId=event.target.value;
-        this.payment = this.payments.filter((a) => a.payment_id == selectedpaymentId)[0]
+    setSelectedPayments(event) {
+      const selectedpaymentId = event.target.value;
+      this.payment = this.payments.filter((a) => a.payment_id == selectedpaymentId)[0]
     },
     async getCart() {
       const res = await fetch(`http://127.0.0.1:5000/api/cart`, {
@@ -182,41 +181,57 @@ const cart = {
     async countinue_shopping() {
       this.$router.push('/search')
     },
-    async checkout(){
-     
-      console.log("add_id",this.address.address_id)
-      console.log("pay_id",this.payment.payment_id)
-      const res = await fetch("http://127.0.0.1:5000/api/order", {
-                    method: "post",
-                    headers: {
-                        "content-type": "application/json",
-                        "Authentication-Token": localStorage.getItem("Auth_token")
-                    },
-                    body: JSON.stringify(this.address, this.payment )
-                })
-                console.log(res.status)
-                if (res.ok) {
-                    const data=await res.json()
-                    id=data.order_id
-                    this.$router.push('/order/${id}')
+    async checkout() {
 
-                    this.message = console.log("your order is successful.thank you for shopping with us ")
-                }
-                else {
-                    const errorData = await res.json()
-                    this.success = false
-                    this.error_message = errorData.error_message
-                }
+      
+      if(this.address.address_id == 0 || this.payment.payment_id == 0){
+        alert("Please select address and payment method");
+        return;
+      }
+
+      //console.log("add_id", this.address.address_id)
+      //console.log("pay_id", this.payment.payment_id)
+      let ord = {
+        "selectedaddress": this.address.address_id,
+        "selectedpayment": this.payment.payment_id
+      }
+
+      console.log(ord);
+      const res = await fetch("http://127.0.0.1:5000/api/order", {
+        method: "post",
+        headers: {
+          "content-type": "application/json",
+          "Authentication-Token": localStorage.getItem("Auth_token")
+        },
+        body: JSON.stringify(ord)
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        this.message = "your order is successful.thank you for shopping with us "
+        let id = data.order_id
+        console.log(data)
+        this.$router.push(`/order/${id}`)
+
+        
+      }
+      else {
+        const errorData = await res.json()
+        this.success = false
+        this.error_message = errorData.error_message
+      }
     }
   },
-  created(){
+  created() {
     this.getAddress = useGetAddresses
-    this.getpayments= useGetPayments
+    this.getpayments = useGetPayments
   },
   async mounted() {
     this.getCart()
     this.addresses = await this.getAddress()
-    this.payments= await this.getpayments()
+    this.payments = await this.getpayments()
+    this.address.address_id = 0;
+    this.payment.payment_id = 0;
   }
 }
 
