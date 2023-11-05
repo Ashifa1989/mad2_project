@@ -156,7 +156,8 @@ const home = {
       })
 
       if (res.ok) {
-        this.$router.push("/cart")
+        alert("Item added to cart")
+        //this.$router.push("/cart")
       }
       else {
         console.log("something went wrong")

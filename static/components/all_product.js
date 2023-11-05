@@ -125,6 +125,7 @@ const all_product = {
   },
   mounted() {
     this.getProducts();
+    
   }
 }
 

@@ -526,24 +526,27 @@ class cart_Api(Resource):
         user_id=current_user.id
         #print(user_id)
         carts=Cart.query.filter_by(user_id=user_id).all()
-        cart_data = []
-        for cart in carts:
-             
-            cart_data.append({
-                "cart_id": cart.cart_id,
-                "user_id": cart.user_id,
-                "product_id": cart.product.product_id,
-                "product_name": cart.product.product_name,
-                "image_url": cart.product.image_url,
-                "Description":cart.product.Description,
-                "price_per_unit": cart.product.price_per_unit,
-                "quantity": cart.quantity,
-                "total_price":cart.total_price
-            })
-        if cart_data:
-            return cart_data
+        if carts:
+            cart_data = []
+            for cart in carts:
+                
+                cart_data.append({
+                    "cart_id": cart.cart_id,
+                    "user_id": cart.user_id,
+                    "product_id": cart.product.product_id,
+                    "product_name": cart.product.product_name,
+                    "image_url": cart.product.image_url,
+                    "Description":cart.product.Description,
+                    "price_per_unit": cart.product.price_per_unit,
+                    "quantity": cart.quantity,
+                    "total_price":cart.total_price
+                })
+            if cart_data:
+                return cart_data
+            else:
+                return {"message":"Your cart is empty!! Continue shopping to browse and search for items."}
         else:
-            raise SchemaValidationError(status_code=404, error_message="There are no items in your cart ")
+            return {"message":"Your cart is empty!! Continue shopping to browse and search for items."}, 204
     
     @marshal_with(output_cart_field)
     @auth_required("token")

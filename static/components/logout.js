@@ -17,8 +17,9 @@ const logout = {
         async logout() {
             const res = await fetch("/logout")
             if (res.ok) {
-                this.$emit('userLoggedOut')
+                this.$root.$emit('userLoggedOut')  
                 this.$router.push("/login")
+                localStorage.clear();
             }
             else {
                 this.success = false
