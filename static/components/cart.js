@@ -18,8 +18,8 @@ const cart = {
                 </h4>
 
                 <ul class="list-group mb-3">
-                    <div class="card" style="display: flex; flex-direction: column; align-items: left;  height: 45vh;">
-
+                    <div class="card" style="display: flex; flex-direction: column; align-items: left; justify-content: auto; height: 45vh;">
+                      <div v-if="products.length>0">
                         <div v-if="success" v-for="product in products">
                             <li class="list-group-item d-flex justify-content-between lh-sm">
                                 <div>
@@ -35,7 +35,10 @@ const cart = {
 
                         <div v-else>
                             <strong> {{ error_message }}</strong>
+                            
                         </div>
+                      </div>
+                      <div v-else><strong>{{ error_message }}</strong></div>
                     </div>
                     <li class="list-group-item d-flex justify-content-between">
                         <strong><span>Total price. Rs. {{cart_total_amount}} </span></strong>
@@ -69,7 +72,7 @@ const cart = {
                         <input type="text" class="form-control" id="postcode1" placeholder="" v-model="address.postal_code">
                     </div>
                 </div>
-                <div> <span style="color: green; margin-up:30px"> Do you want to add new Address? </span> <a href="/#/address" > click here </a> </div>
+                <div> <span style="color: green; margin-up:30px"> Do you want to add new Address?  <a href="/#/address" > click here </a></span> </div>
 
                 <hr class="my-4">
                 <h4 class="mb-3">Payment method</h4>
@@ -98,6 +101,7 @@ const cart = {
 
                     </div>
                 </div>
+                <div> <span style="color: green; margin-up:30px"> Do you want to add new Payment Details?  <a href="/#/payment" > click here </a></span> </div>
 
                 <hr class="my-4">
                 <button class="w-30 btn btn-secondary btn-lg col-md-3" type="button" @click.prevent="countinue_shopping">Continue shopping</button>
@@ -115,7 +119,7 @@ const cart = {
       cart_total_amount: 0,
       address: {},
       payment: {},
-      error_message: "To add to your trolley, you'll need an account.",
+      error_message: "Your cart is empty!! Continue shopping to browse and search for items." ,
       addresses: [],
       payments: [],
       message: "",
@@ -144,6 +148,7 @@ const cart = {
       })
       //console.log(res.status)
       if (res.ok) {
+        
         if(res.status == 200){
         const data = await res.json()
         this.success = true
@@ -152,9 +157,9 @@ const cart = {
         this.message = data.message
         }
         else{
-          this.products = []
+          // this.products = []
           this.success = false
-          this.error_message = "Your cart is empty"          
+          this.error_message = "Your cart is empty!! Continue shopping to browse and search for items."          
         }
       }
       else {
@@ -200,7 +205,7 @@ const cart = {
       }
 
       console.log(ord);
-      const res = await fetch("${this.apiBaseUrl}/order", {
+      const res = await fetch(`${this.apiBaseUrl}/order`, {
         method: "post",
         headers: {
           "content-type": "application/json",
@@ -226,10 +231,12 @@ const cart = {
   created() {
     this.getAddress = useGetAddresses
     this.getpayments = useGetPayments
+    console.log('i am here')
   },
   async mounted() {
     this.getCart();
     this.addresses = await this.getAddress()
+    
     this.payments = await this.getpayments()
     this.address.address_id = 0;
     this.payment.payment_id = 0;

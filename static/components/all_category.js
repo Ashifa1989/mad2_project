@@ -18,11 +18,11 @@ const all_category = {
               <td>{{ category.category_name}}</td>
               <td>{{ category.imagelink }}</td>
               <td>            
-              <button type="button"  class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setSelectedCategory(category)" >
+              <button type="button"  class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setSelectedCategory(category)" >
                 Update
               </button>
               </td>              
-              <td><button class="btn btn-primary"  @click.prevent="deleteCategory(category.category_id)">Delete</button></td>
+              <td><button class="btn btn-success"  @click.prevent="deleteCategory(category.category_id)">Delete</button></td>
               
             </tr>
             <tr v-else>
@@ -50,13 +50,13 @@ const all_category = {
                     </div>
                     <div class="modal-footer">
                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                      <button type="button" @click="Create_update_category()" class="btn btn-primary">Save</button>
+                      <button type="button" @click="Create_update_category()" class="btn btn-success">Save</button>
                     </div>
               </div>
           </div>
         </div>
                         
-      <button type="button"  class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setcategory()" >
+      <button type="button"  class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setcategory()" >
               Create Category
       </button>       
         

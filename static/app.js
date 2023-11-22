@@ -60,10 +60,59 @@ const app = new Vue({
         userLoggedOut() {
             console.log("inside app.js userLoggedout method");
             this.isLoggedIn = false; // Update the prop value when the user logs out
+            
         },
     },
+    // async mounted() {
+    //     this.isLoggedIn = localStorage.getItem('isLoggedIn');
+
+    // },
     async mounted() {
+        
+        this.$root.$on('userLoggedInEvent', (roles) => {
+            this.isLoggedIn = true;
+
+            if (roles.some(r => r.name == 'Manager')) {
+                this.isManager = true;
+            }
+            else {
+                this.isManager = false;
+            }
+            if (roles.some(r => r.name == 'Admin')) {
+                this.isAdmin = true;
+            }
+            else {
+                this.isAdmin = false;
+            }
+        }),
+        this.$root.$on('userLoggedOut', () => {
+            this.isLoggedIn = false;
+        }),
+
         this.isLoggedIn = localStorage.getItem('isLoggedIn');
+        this.isLoggedIn = false;
+        this.isAdmin = false;
+        this.isManager = false;
+
+        const textRoles = localStorage.getItem('roles');
+        if (textRoles) {
+            const roles = JSON.parse(textRoles)
+            this.isLoggedIn = true;
+
+            if (roles.some(r => r.name == 'Manager')) {
+                this.isManager = true;
+            }
+            else {
+                this.isManager = false;
+            }
+            if (roles.some(r => r.name == 'Admin')) {
+                this.isAdmin = true;
+            }
+            else {
+                this.isAdmin = false;
+            }
+        }
+        
     }
 
 })

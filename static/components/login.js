@@ -52,10 +52,14 @@ const login = {
         const data = await res.json()
         this.formData = data
         this.success = true
+        const tokenExpirationMinutes = 60
+        const now = new Date()
+        const tokenExpiration = new Date(now.getTime() + tokenExpirationMinutes * 60000)   // 1 minute= 60000 milliseconds
 
         localStorage.setItem('Auth_token', data.response.user.authentication_token)
         localStorage.setItem('user_id', data.response.user.id)
         localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('tokenExpiration', tokenExpiration);
         
 
         const response = await fetch(`http://127.0.0.1:5000/api/user`, {

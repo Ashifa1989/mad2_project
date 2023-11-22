@@ -30,10 +30,10 @@ const all_product = {
                 <td>{{product.manufacture_date}}</td>
                 <td>{{product.expairy_date}}</td>        
                 <td>
-                  <button class="btn btn-primary" @click.prevent="openProductDetails(product.product_id)"> Update</button>
+                  <button class="btn btn-success" @click.prevent="openProductDetails(product.product_id)"> Update</button>
                 </td>             
                 <td>
-                  <button class="btn btn-primary"  @click.prevent="deleteProduct(product.product_id)" >Delete</button>
+                  <button class="btn btn-success"  @click.prevent="deleteProduct(product.product_id)" >Delete</button>
                 </td>
                 
               </tr>
@@ -42,7 +42,7 @@ const all_product = {
               </tr> 
           </tbody>             
           
-          <button class="btn btn-primary" @click.prevent="openProductDetails(0)"> AddProduct</button>
+          <button class="btn btn-success" @click.prevent="openProductDetails(0)"> AddProduct</button>
         
         </table>
       </div> 

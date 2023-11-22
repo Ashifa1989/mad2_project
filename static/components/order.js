@@ -5,6 +5,7 @@ const order = {
 <div> Order Id : {{order.order_id}}</div>
 <div>Address Details : {{ order.address.street }} {{ order.address.city}} {{order.address.state}} {{order.address.postal_code}}</div>
 <div>Payment type : {{order.payment.type}} </div>
+<div>Order date : {{order.order_date}} </div>
 <div v-if="success" v-for="item in order.order_items" class="card">
   <div>{{ message }}</div>
   <div> Name:{{ item.product.product_name }}</div>

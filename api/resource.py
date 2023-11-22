@@ -19,7 +19,7 @@ api = Api(prefix="/api")
 output_user_field = {
     "username" : fields.String,
 
-    # "email" : fields.String,
+    "email" : fields.String,
     # "password" : fields.String,
     "id": fields.Integer, 
     "roles": fields.List(fields.Nested({
@@ -64,6 +64,7 @@ output_order_field={
     "address_id": fields.Integer,
     "payment_id" : fields.Integer,
     "order_id" : fields.Integer,
+    "order_date":fields.DateTime,
     "user_id" : fields.Integer,
     "total_price":fields.Float,
     "address": fields.Nested ({"street" : fields.String, "city" : fields.String , "state" : fields.String , "postal_code" : fields.String}),
@@ -749,8 +750,13 @@ class payment_api(Resource):
 class Admin_approval(Resource):
     @marshal_with(output_user_field)
     def get(self):
-        inactive_manger= user_model.query.filter_by(active=False).all()
-        return inactive_manger
+        inactive_manager= user_model.query.filter_by(active=False).all()
+        print(len(inactive_manager))
+        if  len(inactive_manager) == 0 :
+            return {"status":204, "error_message":"no new Manager SignUp "}
+        else:
+            return inactive_manager
+
     def put(self, id):
         manager=user_model.query.filter_by(id=id).first()
         manager.active=True
@@ -759,7 +765,9 @@ class Admin_approval(Resource):
 class Admin_reject(Resource):
     def put(self, id):
         manager=user_model.query.filter_by(id=id).first()
+        # print(manager.active)
         manager.active=True
+        db.session.commit()
         manager_role = Role.query.filter_by(name="Manager").first()
         if manager_role is not None:
             role = RolesUsers.query.filter_by(user_id=manager.id, role_id=manager_role.id).first()
@@ -768,6 +776,7 @@ class Admin_reject(Resource):
                 db.session.delete(role)  
                 db.session.commit()
                 return {"message" : "manager role rejected from admin"}, 200
+        
 
        
 

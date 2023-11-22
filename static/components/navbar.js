@@ -2,7 +2,7 @@
 const navbar = {
     template: `
     <div>
-        <div  class="container-flex">
+        <div   class="container-flex">
             <nav class="navbar navbar-expand-lg navbar-light bg-success">
                 <div class="navbar-brand" href="#">
                     <h2 style="color: rgb(0, 3, 3); margin-left: 5px;">Leaf Grocery Shop</h2>
@@ -36,11 +36,15 @@ const navbar = {
         }
     },
     methods: {
+        
         userLoggedIn() {
             this.isLoggedIn = true;
+            
         },
+        
     },
     async mounted() {
+        
         this.$root.$on('userLoggedInEvent', (roles) => {
             this.isLoggedIn = true;
 
@@ -59,16 +63,16 @@ const navbar = {
         }),
         this.$root.$on('userLoggedOut', () => {
             this.isLoggedIn = false;
-        })
+        }),
 
         //this.isLoggedIn = localStorage.getItem('isLoggedIn');
-        // this.isLoggedIn = false;
-        // this.isAdmin = false;
-        // this.isManager = false;
+        this.isLoggedIn = false;
+        this.isAdmin = false;
+        this.isManager = false;
 
-        const textRoels = localStorage.getItem('roles');
-        if (textRoels) {
-            const roles = JSON.parse(textRoels)
+        const textRoles = localStorage.getItem('roles');
+        if (textRoles) {
+            const roles = JSON.parse(textRoles)
             this.isLoggedIn = true;
 
             if (roles.some(r => r.name == 'Manager')) {
@@ -84,6 +88,7 @@ const navbar = {
                 this.isAdmin = false;
             }
         }
+        
     }
 }
 export default navbar
