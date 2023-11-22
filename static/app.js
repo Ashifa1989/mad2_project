@@ -15,6 +15,7 @@ import payment from './components/payment.js'
 import signUpManager from './components/signUpManager.js'
 import admin from './components/adminDashboard.js'
 
+
 const routes = [
     { path: '/home', component: home },
     { path: '/signUp', component: signUp },

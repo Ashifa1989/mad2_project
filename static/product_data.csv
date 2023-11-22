@@ -1,4 +1,2 @@
 product_id,product_name,Description,Catagory_id,price_per_unit,Stock,image_url,manufacture_date,expairy_date,timestamp,quantity
-1,Water melon (yellow),Yellow colour water melon local,1,5.0,99,,2023-11-04,2023-11-11,2023-10-30 10:05:36.880613,
-2,Orange,made in malaysia,1,4.0,99,,2023-11-04,2023-11-11,2023-10-30 10:06:08.828659,
-3,strawbwrry,Sweet strwberry imported from French Guiana,1,12.0,99,,2023-11-01,2023-11-08,2023-11-02 09:00:37.407934,
+1,milk,made in malaysia,2,5.0,100,,2023-11-14,2023-11-30,2023-11-14 10:06:27.534718,

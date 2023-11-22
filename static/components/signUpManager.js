@@ -15,6 +15,8 @@ const signUpManager={
 
             <button type="submit" style="padding: 8px 15px; background-color: green; color: white; border: none; border-radius: 5px; cursor: pointer;" >Create Account</button>
             </form>
+            <div v-if="success">{{ message }}</div>
+            <div v-else>{{ error_message }}</div>
         </div>
         `,
 
@@ -29,7 +31,8 @@ data() {
             password: ''
         },
         error_message : "",
-        success : true
+        success : true,
+        message:""
 
         }
     },
@@ -47,26 +50,27 @@ data() {
             console.log(res)
             if (res.ok){
                 const data = await res.json()
-                
+                this.message=data.message
+                // alert(this.message)
                 const adminApprovalres=await fetch("/send_admin_approval_request")
-                if (res.ok){
+                if (adminApprovalres.ok){
                 const adminApprovaldata= await adminApprovalres.json()
                 console.log("sending request for approval", adminApprovaldata)
                 }
                 this.user = data
                 this.success = true
-                this.$router.push('/login'); 
+                console.log(data)
+                this.$router.push('/logout'); 
             }
             else {
                 const errorData = await res.json()
                 this.success = false
                 this.error_message= errorData.error_message
+                console.log(this.error_message)
             }
         }
     },
-    // async send_admin_approval_request(){
-        
-    // }
+    
     
 }
 export default signUpManager

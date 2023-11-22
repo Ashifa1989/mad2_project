@@ -15,6 +15,8 @@ const signUp={
 
             <button type="submit" style="padding: 8px 15px; background-color: green; color: white; border: none; border-radius: 5px; cursor: pointer;">Create Account</button>
             </form>
+            <div v-if="success">{{ message }}</div>
+            <div v-else>{{ error_message }}</div>
         </div>
         `,
 
@@ -29,7 +31,8 @@ data() {
             password: ''
         },
         error_message : "",
-        success : true
+        success : true,
+        message : ""
 
         }
     },
@@ -49,12 +52,14 @@ data() {
                 const data = await res.json()
                 this.user = data
                 this.success = true
+                this.message = data.message
                 this.$router.push('/login'); 
             }
             else {
                 const errorData = await res.json()
                 this.success = false
                 this.error_message= errorData.error_message
+                console.log("i am here", this.error_message)
             }
         }
     },

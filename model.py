@@ -30,17 +30,18 @@ class User(db.Model,UserMixin):
     password = db.Column(db.String(255), nullable=False)
     active = db.Column(db.Boolean())
     fs_uniquifier = db.Column(db.String(255), unique=True , nullable=False)
-    # timestamp = db.Column(db.DateTime)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     roles = db.relationship('Role', secondary='roles_users',
                          backref=db.backref('users', lazy='dynamic'))
-    
+    orders=db.relationship("Order", backref="user")
 
-    def __init__(self, email, password,username,active):
+    def __init__(self, email, password,username,active,roles):
         self.username=username
         self.email = email
         self.active=active
-        # self.roles=roles
+        self.roles=roles
         self.password = password
+        self.timestamp=datetime.now()
         self.fs_uniquifier = generate_random_uniquifier()
 
 def generate_random_uniquifier():
@@ -58,8 +59,10 @@ class Category(db.Model):
     category_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     category_name = db.Column(db.String, unique=True, nullable=False)
     imagelink = db.Column(db.Text, nullable=True)
-    # cart_id = db.Column(db.Integer, db.ForeignKey('cart.cart_id'))
-    product = db.relationship('Product', backref='category', cascade = "all, delete") # one to many relation btw catogory and product
+    approve= db.Column(db.Boolean())
+    updateRequest=db.Column(db.Boolean())
+    deleteRequest=db.Column(db.Boolean())
+    product = db.relationship('Product', backref='category', lazy="subquery") # one to many relation btw catogory and product
 
 class Product(db.Model):
     __tablename__ = "product"

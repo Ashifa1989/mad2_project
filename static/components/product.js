@@ -1,6 +1,8 @@
 
 const product = {
     template: `<div>
+    <div v-if="success"><strong> {{ message }}</strong></div>
+    <div v-else><strong> {{ error_message }}</strong></div>
     <form >
         <div class="mb-3">
             <label for="productName" class="form-label">Product Name:</label>
@@ -37,7 +39,7 @@ const product = {
             <label for="expairy_date" class="form-label" > Expairy_date:</label>
             <input type="date" class="form-control"  id="expairy_date" v-model="product.expairy_date" placeholder="Expiry Date"></input>
         </div>
-        <button type="button" @click="create_update_Product()" class="btn btn-primary">Save Product</button>
+        <button type="button"  @click="create_update_Product()" class="btn btn-success">Save Product</button>
         
     </form>  
     
@@ -61,6 +63,7 @@ const product = {
             categories: "",
             success: true,
             error_message: "",
+            message:""
         }
     },
     methods: {
@@ -68,11 +71,13 @@ const product = {
             const response = await fetch("http://127.0.0.1:5000/api/category");
             if (response.ok) {
                 const data = await response.json();
-                console.log(data);
-                this.categories = data;
+                console.log("approvedata",data)
+                this.categories = data.filter(category=> category.approve==true);
+                console.log(this.categories)
             }
             else {
-                this.categories = []
+                const errorData =await response.json()
+                this.error_message = errorData.error_message
             }
         },
 
@@ -102,7 +107,8 @@ const product = {
                     method: "post",
                     headers: {
                         "content-type": "application/json",
-                        "Cache-Control": "no-store, no-cache"
+                        "Cache-Control": "no-store, no-cache",
+                        "Authentication-Token" : localStorage.getItem("Auth_token")
                     },
                     body: JSON.stringify(this.product),
                 })
@@ -122,7 +128,8 @@ const product = {
                     method: "put",
                     headers: {
                         "content-type": "application/json",
-                        "Cache-Control": "no-store, no-cache"
+                        "Cache-Control": "no-store, no-cache",
+                        "Authentication-Token" : localStorage.getItem("Auth_token")
                     },
                     body: JSON.stringify(this.product),
                 })

@@ -1,4 +1,4 @@
-
+// import { tokenValidation } from "../mixins/tokenValidation";
 const home = {
   template: `
   <div>
@@ -29,30 +29,28 @@ const home = {
 
   <p></p>
   <div class="row row-cols-1 row-cols-md-4 g-4">
-      <div v-if="success" v-for="product in products">
-
-          <div class="col">
-              <div class="card h-100">
-                  <img :src=" product.image_url " class="card-img-top" alt="...">
-                  <div class="card-body">
-                      <div>
-                          <h5 class="card-title">{{ product.product_name }}</h5>
-                          <p class="card-text">{{ product.Description }} </p>
-                          <div> Price: {{ product.price_per_unit }} </div>
-
-                          <div>
-                              <div <br>
-
-                                  <button class="btn btn-primary" @click.prevent="addtoCart(product.product_id)">Add to Cart</button>
-
-                              </div>
-
-                          </div>
-                      </div>
-                  </div>
-              </div>
+    <div v-if="success" v-for="product in products">
+      <div class="col">
+        <div class="card h-100">
+          <img :src=" product.image_url " class="card-img-top" alt="...">
+          <div class="card-body">
+            <div>
+              <h5 class="card-title">{{ product.product_name }}</h5>
+              <p class="card-text">{{ product.Description }} </p>
+              <div> Price: {{ product.price_per_unit }} </div>
+              
+            </div>
+            <br></br>
+              <button class="btn btn-primary" @click.prevent="addtoCart(product.product_id)">Add to Cart</button>
           </div>
+        </div>
       </div>
+    </div>
+    <div v-else>
+    {{error_message}}
+    </div>
+  </div>
+      
   </div>`,
 
   data() {
@@ -68,31 +66,44 @@ const home = {
       categories: [],
       product: {
         product_id: 0,
-        quantity: 0,
+        quantity: 1,
         product_name: "",
       },
       success: true,
-      error_message: ""
+      error_message: "",
+      
     };
   },
+//   mixins: [
+//     tokenValidation
+// ],
+
+  
+  
   mounted() {
     this.getCategories();
     this.searchProducts();
+    // this.validateToken();
   }
   ,
   methods: {
+     
+  
 
     async getCategories() {
+      // const token=this.validateToken()
+      // if (token){
       const response = await fetch("http://127.0.0.1:5000/api/category");
       if (response.ok) {
         const data = await response.json();
-        console.log(data);
-        this.categories = data;
+        this.categories = data.filter(category=>category.approve==true);
+        
       }
       else {
         this.categories = []
       }
-    },
+    //  }
+  },
 
 
     async searchProducts() {
@@ -100,7 +111,7 @@ const home = {
         method: "post",
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "no-store, no-cache"
+          // "Cache-Control": "no-store, no-cache"
 
         },
         body: JSON.stringify(this.searchQuery)
@@ -109,40 +120,40 @@ const home = {
 
       if (res.ok) {
         const data = await res.json()
-        if (data == []) {
-          console.log("sorry!! no product found")
+        // console.log("data", data.length)
+        if (data.length == 0) {
+          
+          this.success=false
+          this.error_message="sorry!! no product found"
         }
         else {
+          this.success=true
           this.products = data
+          
         }
-      }
-      else {
-        console.log("something went wrong")
-      }
-    },
-
-    async show_cart_item() {
-      const res = await fetch(`/api/cart/user/${this.$route.params.id}`)
-
-      if (res.ok) {
-        const data = await res.json()
-        this.products = data
-        console.log(data[0].price_per_unit)
       }
       else {
         const errorData = await res.json()
-        this.success = false
-        this.error_message = data.errror_message
+        this.success=false
+        this.error_message=errorData.error_message
       }
     },
-    incrementQuantity() {
-      this.quantity++
-    },
-    decrementQuantity() {
-      if (this.quantity > 0) {
-        this.quantity--
-      }
-    },
+
+    // async show_cart_item() {
+    //   const res = await fetch(`/api/cart/user/${this.$route.params.id}`)
+
+    //   if (res.ok) {
+    //     const data = await res.json()
+    //     this.products = data
+    //     console.log(data[0].price_per_unit)
+    //   }
+    //   else {
+    //     const errorData = await res.json()
+    //     this.success = false
+    //     this.error_message = errorData.error_message
+    //   }
+    // },
+    
     async addtoCart(id) {
       this.product.product_id = id
       this.product.quantity = 1

@@ -18,18 +18,29 @@ const cart = {
                 </h4>
 
                 <ul class="list-group mb-3">
-                    <div class="card" style="display: flex; flex-direction: column; align-items: left; justify-content: auto; height: 45vh;">
+                    <div class="card" style="display: flex; flex-direction: column; align-items: left; justify-content: auto; height: 65vh;">
                       <div v-if="products.length>0">
                         <div v-if="success" v-for="product in products">
                             <li class="list-group-item d-flex justify-content-between lh-sm">
                                 <div>
-                                    <h6 class="my-0">{{product.product_name}} </h6>
-                                    <small class="text-body-secondary">Quantity: {{product.quantity}} </small>
-                                    <br>
-                                    <small class="text-body-secondary">Price per unit: {{product.price_per_unit}}</small>
-                                    <a @click="deleteCartItem(product.cart_id)" class="delete-icon color:green">Remove</a>
+                                    <div><h5 class="my-0 "  <a href="/#/home" class="text-dark">{{product.product_name}} </a></h5></div>
+                                    <div><small class="text-body-secondary">Quantity: {{product.quantity}} </small></div>
+                                    <div>
+                                      <button @click="decrementQuantity(product)">-</button>
+                                        {{ product.quantity }}
+                                      <button @click="incrementQuantity(product.product_id)">+</button>
+                                    </div>
+                                    <div><small class="text-body-secondary">Price per unit: {{product.price_per_unit}}</small></div>
+                                    
+                                
+                                
                                 </div>
-                                <span class="text-body-secondary"> Rs. {{product.total_price}}</span>
+                                <div>
+                                <span class="text-body-secondary "> Rs. {{product.total_price}}</span>
+                                
+                                <div><a @click="deleteCartItem(product.cart_id)" class="delete-icon text-success">Remove</a></div>
+                               
+                                </div>
                             </li>
                         </div>
 
@@ -72,7 +83,7 @@ const cart = {
                         <input type="text" class="form-control" id="postcode1" placeholder="" v-model="address.postal_code">
                     </div>
                 </div>
-                <div> <span style="color: green; margin-up:30px"> Do you want to add new Address?  <a href="/#/address" > click here </a></span> </div>
+                <div> <span style="color: black; margin-up:30px"> Do you want to add new Address?  <a href="/#/address" class="text-success"> click here </a></span> </div>
 
                 <hr class="my-4">
                 <h4 class="mb-3">Payment method</h4>
@@ -101,7 +112,7 @@ const cart = {
 
                     </div>
                 </div>
-                <div> <span style="color: green; margin-up:30px"> Do you want to add new Payment Details?  <a href="/#/payment" > click here </a></span> </div>
+                <div> <span style="color: black; margin-up:30px"> Do you want to add new Payment Details?  <a href="/#/payment" class="text-success" > click here </a></span> </div>
 
                 <hr class="my-4">
                 <button class="w-30 btn btn-secondary btn-lg col-md-3" type="button" @click.prevent="countinue_shopping">Continue shopping</button>
@@ -119,10 +130,15 @@ const cart = {
       cart_total_amount: 0,
       address: {},
       payment: {},
-      error_message: "Your cart is empty!! Continue shopping to browse and search for items." ,
+      error_message: "Your cart is empty!! Continue shopping to browse and search for items.",
       addresses: [],
       payments: [],
       message: "",
+      product: {
+        product_id: 0,
+        quantity: 1,
+
+      },
       apiBaseUrl: "http://127.0.0.1:5000/api/"
     }
   },
@@ -148,18 +164,18 @@ const cart = {
       })
       //console.log(res.status)
       if (res.ok) {
-        
-        if(res.status == 200){
-        const data = await res.json()
-        this.success = true
-        this.products = data
-        this.cart_total_amount = data.reduce((accum, item) => accum + item.total_price, 0)
-        this.message = data.message
+
+        if (res.status == 200) {
+          const data = await res.json()
+          this.success = true
+          this.products = data
+          this.cart_total_amount = data.reduce((accum, item) => accum + item.total_price, 0)
+          this.message = data.message
         }
-        else{
+        else {
           // this.products = []
           this.success = false
-          this.error_message = "Your cart is empty!! Continue shopping to browse and search for items."          
+          this.error_message = "Your cart is empty!! Continue shopping to browse and search for items."
         }
       }
       else {
@@ -226,6 +242,87 @@ const cart = {
         this.success = false
         this.error_message = errorData.error_message
       }
+    },
+    async incrementQuantity(id) {
+      // Assuming this.product.quantity is the current quantity in the cart
+      this.product.product_id = id;
+      console.log("Product ID:", this.product.product_id);
+
+      // Fetch all cart data
+      const cartDataResponse = await fetch(`http://127.0.0.1:5000/api/cart`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authentication-Token": localStorage.getItem("Auth_token")
+        }
+      });
+
+      if (cartDataResponse.ok) {
+        const cartData = await cartDataResponse.json();
+        console.log(cartData)
+        // Find the product in the cart based on its ID
+        console.log("id=", id)
+        const productInCart = cartData.find(product => product.product_id == id);
+        console.log(productInCart.quantity)
+
+        if (productInCart) {
+          // update the quantity
+          const updatedQuantity = productInCart.quantity + 1;
+          console.log(updatedQuantity)
+
+
+          // Update the cart with the new quantity
+          const updateCartResponse = await fetch(`http://127.0.0.1:5000/api/cart`, {
+            method: "post",
+            headers: {
+              "Content-Type": "application/json",
+              "Authentication-Token": localStorage.getItem("Auth_token")
+            },
+            body: JSON.stringify({ product_id: id, quantity: 1 })
+          });
+
+          if (updateCartResponse.ok) {
+            console.log("successful, update the local quantity")
+            this.product.quantity = updatedQuantity
+            this.getCart()
+
+          } else {
+            console.log("Product not found in cart");
+          }
+        } else {
+          console.log("Failed to fetch cart data");
+        }
+      }
+    },
+
+    async decrementQuantity(prd) {
+
+      //console.log("Product ID:", prd.product_id);
+      if (prd.quantity > 1) {
+        // Update the cart with the new quantity
+        const updateCartResponse = await fetch(`http://127.0.0.1:5000/api/cart`, {
+          method: "put",
+          headers: {
+            "Content-Type": "application/json",
+            "Authentication-Token": localStorage.getItem("Auth_token")
+          },
+          body: JSON.stringify({ product_id: prd.product_id, quantity: 1 })
+        });
+
+        if (updateCartResponse.ok) {
+          //refresh cart after decrement via API/DB call
+          //this.getCart()
+          //refresh cart using variable
+          prd.quantity --;
+        }
+        else {
+          console.log("Cart update via API call failed");
+        }
+      }
+      else {
+        this.message = false
+        this.error_message = "Quantity less than 1 decrement not allowed"
+      }
     }
   },
   created() {
@@ -236,7 +333,7 @@ const cart = {
   async mounted() {
     this.getCart();
     this.addresses = await this.getAddress()
-    
+
     this.payments = await this.getpayments()
     this.address.address_id = 0;
     this.payment.payment_id = 0;

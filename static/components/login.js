@@ -3,20 +3,21 @@ const login = {
   <div>
 
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 66vh;">
-        <div v-if="!success" style="display: block; margin-bottom: 5px; color:red">
-          {{ error_message }}
-        </div>
+      <div v-if="!success" class="card  mb-5 border  border-danger border-left-8 p-3" style="background-color:  rgb(255, 218, 231);" >
+        {{ error_message }}
+      </div>
         
-        <form @submit.prevent="loginUser" style="border: 2px solid grey; padding: 20px; border-radius: 10px; max-width: 300px;">
-            <h3 style="text-align: center; ">Login</h3>
-            <label for="email" style="display: block; margin-bottom: 5px;">Email:</label>
-            <input type="email" id="email" v-model="formData.email" placeholder="email" required style="padding: 8px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 10px;" />
+    <form @submit.prevent="loginUser" style="border: 2px solid grey; padding: 20px; border-radius: 10px; max-width: 300px;">
+      <h3 style="text-align: center; ">Login</h3>
+      <label for="email" style="display: block; margin-bottom: 5px;">Email:</label>
+      <input type="email" id="email" v-model="formData.email" placeholder="email" required style="padding: 8px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 10px;" />
 
-            <label for="password" style="display: block; margin-bottom: 5px;">Password:</label>
-            <input type="password" id="password" placeholder="password" v-model="formData.password" required style="padding: 8px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 10px;" />
+      <label for="password" style="display: block; margin-bottom: 5px;">Password:</label>
+      <input type="password" id="password" placeholder="password" v-model="formData.password" required style="padding: 8px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 10px;" />
 
-            <button type="submit" style="padding: 8px 15px; background-color: green; color: white; border: none; border-radius: 5px; cursor: pointer;">Login</button>
-        </form>
+      <button type="submit" style="padding: 8px 15px; background-color: green; color: white; border: none; border-radius: 5px; cursor: pointer;">Login</button>
+    </form>
+
     </div>
 
     
@@ -93,7 +94,7 @@ const login = {
         const errorData = await res.json();
         console.log("Login failed:", errorData);
         this.success = false
-        this.error_message = "You have entered an invalid email or password"
+        this.error_message = "The login was not successful.The email address & password combination you have entered is incorrect. Please try again or click the forgotten password link below to reset your password."
         
       }
     },

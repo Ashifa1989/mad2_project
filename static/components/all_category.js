@@ -3,7 +3,7 @@
 const all_category = {
   template: `
     <div >
-    
+    <div v-if="categories.length>0">
       <table class="table">
         <thead>
           <tr>
@@ -31,6 +31,9 @@ const all_category = {
            
         </tbody>
         </table>
+        </div>
+        <div v-else><strong>"Currently, there are no categories available. You can get started by creating a new category."</strong></div> 
+        
         <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
                   <div class="modal-content">
@@ -52,6 +55,8 @@ const all_category = {
                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                       <button type="button" @click="Create_update_category()" class="btn btn-success">Save</button>
                     </div>
+                    <div v-if="success">{{ message }}</div>
+                    <div v-else>{{ error_message }}</div>
               </div>
           </div>
         </div>
@@ -77,6 +82,7 @@ const all_category = {
       },
       success: true,
       error_message: "",
+      message:""
     }
   },
   methods: {
@@ -86,7 +92,7 @@ const all_category = {
       if (response.ok) {
         const data = await response.json();
         console.log(data);
-        this.categories = data;
+        this.categories = data.filter(category=>category.approve==true );
       }
       else {
         const errorData = await response.json()
@@ -94,14 +100,16 @@ const all_category = {
         this.error_message = errorData.error_message
       }
     },
+
     async setSelectedCategory(selCategory) {
       this.cat = selCategory;
     },
     async setcategory() {
       this.cat = {};
     },
+
     async deleteCategory(id) {
-      const response = await fetch(`http://127.0.0.1:5000/api/category/${id}`, {
+      const res = await fetch(`http://127.0.0.1:5000/api/category/${id}`, {
         method: "delete",
         headers: {
           "Content-Type": "application/json",
@@ -109,25 +117,58 @@ const all_category = {
         },
 
       })
-      if (response.ok) {
-        console.log("deleted the category successfully")
-        const response = await fetch("http://127.0.0.1:5000/api/category");
-        if (response.ok) {
-          const data = await response.json();
-          this.categories = data;
-        }
+      if (res.ok) {
+        const data=await res.json()
+        console.log(data)
+        this.message=data.message
+        alert(this.message)
+        this.$router.go(0)
+        // if (data.deleteRequest == false){
+        //   const response = await fetch("http://127.0.0.1:5000/api/category");
+        //   if (response.ok) {
+        //     const data = await response.json();
+        //     this.categories = data.filter(category=>category.approve==true);
+            
+        //   }
+        //   else {
+        //     const errorData = await response.json()
+        //     this.success = false
+        //     this.error_message = errorData.error_message
+        //   }
+        // }
+        // else {
+        //   alert("please wait for admin approval")
+        //   this.success=true
+        //   this.message=data.message
+        //   const productApprovalres=await fetch("/delete_category_approval_request")
+        //       if (productApprovalres.ok){
+        //       const productApprovaldata= await productApprovalres.json()
+        //       console.log("sending request for approval", productApprovaldata)
+        //       }
+        //   const response = await fetch("http://127.0.0.1:5000/api/category");
+        //   if (response.ok) {
+        //     const data = await response.json();
+        //     this.categories = data.filter(category=>category.approve==true);
+        //     this.message=""
+        //   } 
+        //   else {
+        //     const errorData = await response.json()
+        //     this.success = false
+        //     this.error_message = errorData.error_message
+        //   } 
+        // }  
       }
-      else {
-
-        const errorData = await response.json();
+      else {}
+        const errorData = await res.json();
         this.message = errorData.error_message;
-      }
+      },
+    
 
-    },
+
     async Create_update_category() {
       console.log(this.cat)
       if (this.cat.category_id > 0) {
-        const response = await fetch(`http://127.0.0.1:5000/api/category/${this.cat.category_id}`, {
+        const res = await fetch(`http://127.0.0.1:5000/api/category/${this.cat.category_id}`, {
           method: "put",
           headers: {
             "Content-Type": "application/json",
@@ -136,17 +177,59 @@ const all_category = {
           },
           body: JSON.stringify(this.cat)
         })
-        if (response.ok) {
-          const response = await fetch("http://127.0.0.1:5000/api/category");
-          if (response.ok) {
-            const data = await response.json();
-            this.categories = data;
-          }
+        if (res.ok) {
+            const data=await res.json()
+            this.success=true
+            this.message=data.message
+            alert(this.message)
+            this.$router.go(0)
+            // const response = await fetch("http://127.0.0.1:5000/api/category");
+            // console.log(response)
+            // if (response.ok) {
+            //   const data = await response.json();
+            //   console.log(data);
+            //   this.categories = data.filter(category=>category.approve==true );
+            // }
+            // else {
+            //   const errorData = await response.json()
+            //   this.success = false
+            //   this.error_message = errorData.error_message
+            // } 
+            
+          // }
+          // else {
+          //   alert("category Updates initialized, please wait for admin approval")
+          //   this.success=true
+          //   this.message=data.message
+          //   const productApprovalres=await fetch(`/update_category_approval_request/${this.cat.category_id }`)
+          //       if (productApprovalres.ok){
+          //         const productApprovaldata= await productApprovalres.json()
+          //         console.log("sending request for approval", productApprovaldata)
+                
+          
+          //         const response = await fetch("http://127.0.0.1:5000/api/category");
+          //         if (response.ok) {
+          //         const data = await response.json();
+          //         this.categories = data.filter(category=>category.approve==true && category.updateRequest == false && category.deleteRequest==false);
+          //         this.message=""
+          //         }
+          //         else {
+          //           const errorData = await response.json()
+          //           this.success = false
+          //           this.error_message = errorData.error_message
+          //         } 
+          //       }
+          //       else {
+          //         const errorData = await res.json();
+          //         this.error_message = errorData.error_message;
+          //       }  
+          // }
         }
         else {
-          const errorData = await response.json();
-          this.message = errorData.error_message;
-        }
+          const errorData = await res.json();
+          this.error_message = errorData.error_message;
+        }  
+       
       }
       else {
         const res = await fetch("http://127.0.0.1:5000/api/category", {
@@ -157,22 +240,65 @@ const all_category = {
           },
           body: JSON.stringify(this.cat),
         })
-        console.log(res)
+        console.log(res.status)
         if (res.ok) {
-          const response = await fetch("http://127.0.0.1:5000/api/category");
-          if (response.ok) {
-            const data = await response.json();
-            this.categories = data;
-          }
-        }
-        else {
-          const errorData = await res.json()
-          this.success = false
-          this.error_message = errorData.error_message
-          console.log(error_message)
+          const data=await res.json()
+          this.message=data.message
+          alert(this.message)
+          this.$router.go(0)
+          // if (data.approve == true && data.updateRequest == false){
+            // const response = await fetch("http://127.0.0.1:5000/api/category");
+            // if (response.ok) {
+            //   const data = await response.json();
+            //   this.categories = data.filter(category=>category.approve==true );
+            // }
+            // else {
+            //   const errorData = await response.json()
+            //   this.success = false
+            //   this.error_message = errorData.error_message
+            // } 
+          // }
+        //   else if(data.approve === false && data.updateRequest == false) {
+        //   console.log("i am here in else block of add category");
+
+        //     alert("Addition of new category initialized, please wait for admin approval.")
+        //     this.success=true
+        //     this.message=data.message
+        //     const productApprovalres=await fetch("/new_category_approval_request")
+        //       if (productApprovalres.ok){
+        //         const productApprovaldata= await productApprovalres.json()
+        //         console.log("sending request for approval", productApprovaldata)
+                
+        //         const response = await fetch("http://127.0.0.1:5000/api/category");
+        //         if (response.ok) {
+        //         const data = await response.json();
+        //         this.categories = data
+        //         this.message=""
+        //         }
+        //         else {
+        //           const errorData = await response.json()
+        //           this.success = false
+        //           this.error_message = errorData.error_message
+        //         }   
+        //       }
+        //       else {
+        //         const errorData = await res.json()
+        //         this.success = false
+        //         this.error_message = errorData.error_message
+        //         console.log(this.error_message)
+        //       }
+         }
+          else {
+            const errorData = await res.json()
+            this.success = false
+            this.error_message = errorData.error_message
+            console.log(this.error_message)
+          
         }
       }
-    }   
+       
+    }
+
   },
   mounted() {
     this.getCategories();

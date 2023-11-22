@@ -1,26 +1,119 @@
 from worker import create_celery_app
 from celery import shared_task
-from model import db,User,Product
+from model import db,User,Product, Order, Role
 from httplib2 import Http
 from json import dumps
+from flask_mail import Message
 import csv
+import base64
+import pickle
+import redis
+from datetime import datetime, timedelta, date
+from celery.schedules import crontab
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+import smtplib
+from smtplib import SMTP
+from flask import jsonify
+from datetime import datetime as dt, timedelta, date
 
-# @celery_app.task
+
+SMPTP_SERVER_HOST="192.168.0.160"
+SMPTP_SERVER_PORT= 1025
+SENDER_ADDRESS="email@user1.com"
+SENDER_PASSWORD=""
+
+
+
+# redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+
+# def object_to_base64(obj):
+#     return base64.b64encode(pickle.dumps(obj)).decode('utf-8')
+
+# def base64_to_object(b64_string):
+#     return pickle.loads(base64.b64decode(b64_string.encode('utf-8')))
+
+
+
+
+
+# @shared_task
 # def notify_inactive_users():
-#     # current_time = datetime.utcnow()
-#      #INACTIVITY_THRESHOLD = timedelta(hours=24)
+#     current_time = datetime.utcnow()
+#     inactive_time = timedelta(hours=0,minutes=0, seconds=0)
 #     # Retrieve users and their timestamps from the database
 #     users = User.query.all()  # Query your user model
 
 #     # Iterate through the users
 #     for user in users:
-#         # user_timestamp = user.timestamp
+#     #     user_timestamp = user.timestamp
 
-#         # Calculate the time difference between the current time and the user's timestamp
-#         # time_since_last_activity = current_time - user_timestamp
+#     # # Calculate the time difference between the current time and the user's timestamp
+#     #     time_since_last_activity = current_time - user_timestamp
 
-#         # if time_since_last_activity > INACTIVITY_THRESHOLD:
-#             send_notification(user.id)
+#     #     if time_since_last_activity > inactive_time:
+#             # send_inactive_user_emails(user.id)
+#             send_remainder_via_email(id)
+
+# @shared_task
+# def send_remainder_via_email():
+#     # user=user.query.filter_by(id=id).first()
+#     send_email (
+
+#         to_address="email@user1.com",
+#         subject="Inactive user notification",
+#         message="Hello! It's been a while since you've visited. Explore our latest addition to the shop since your last visit!"
+
+#     )
+#     return "Email should arraive in your inbox shortly"
+
+
+# def send_email(to_address, subject, message,content="text", attachment_file=None):
+   
+#     msg = MIMEMultipart()
+#     msg['From'] = SENDER_ADDRESS
+#     msg['To'] = to_address
+#     msg['Subject'] = subject
+#     if content == "html":
+#         msg.attach(MIMEText(message, "html"))
+#     else:
+#         msg.attach(MIMEText(message, "plain"))
+#     if attachment_file:
+#         with open(file_path, 'rb') as attachment:
+#             part = MIMEBase('application', 'octet-stream')
+#             part.set_payload(attachment.read())
+#             encoders.encode_base64(part)
+#             part.add_header('Content-Disposition', f'attachment; filename= {file_path}')
+#             msg.attach(part)
+#     s=smtplib.SMTP(host=SMPTP_SERVER_HOST, port=SMPTP_SERVER_PORT)
+#     s.login(SENDER_ADDRESS, SENDER_PASSWORD)
+#     s.send_message(msg)
+#     s.quit()
+#     return True
+
+# def send_inactive_user_emails(id):
+#     user=User.query.filter_by(id=id).first()
+#     recipient_email = user.email
+
+#     msg = Message('Inactive User Reminder',
+#             sender='use1@example.com',
+#             recipients=[recipient_email])
+#     msg.body = 'You have been inactive for more than 24 hours. Please log in to stay updated.'
+#     # mail.send(msg)
+#     with SMTP('localhost', 1025) as smtp:  # Use MailHog SMTP server settings
+#         smtp.send_message(msg)
+
+# @celery_app.on_after_finalize.connect
+# def setup_periodic_tasks(sender, **kwargs):
+#     sender.add_periodic_task(
+#         crontab(hour=17, minute=2),  # Schedule daily at midnight
+#         notify_inactive_users.s(),  # Task to execute
+#         name="notify_inactive_users_daily"  # Name of the task
+#     )
 # def send_notification(user_id):
 #     url = "https://chat.googleapis.com/v1/spaces/AAAAJavNvqQ/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=exJDyF2pmVGcFSEgfeV97RFarCwqhc4QvXkxKtWqMTw"
 #     app_message = {
@@ -34,6 +127,9 @@ import csv
 #         body=dumps(app_message),
 #     )
 #     print("senting notification")
+
+# class config:
+#     googleApiUrl = ""
 
 
 
@@ -60,11 +156,59 @@ def send_admin_approval_request():
 #         # send_mail_tomanger(user.id)
     
 
-# # @celery_app.task
-# # def send_mail_tomanger(id):
-    
-                
 
+@shared_task
+def new_category_approval_request():
+    url = "https://chat.googleapis.com/v1/spaces/AAAAJavNvqQ/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=exJDyF2pmVGcFSEgfeV97RFarCwqhc4QvXkxKtWqMTw"
+    app_message = {
+        'text': 'A new category has been created and is awaiting your approval '}
+
+    message_headers = {'Content-Type': 'application/json; charset=UTF-8'}
+    http_obj = Http()
+    response = http_obj.request(
+        uri=url,
+        method='POST',
+        headers=message_headers,
+        body=dumps(app_message),
+    )
+    print(response)
+                
+@shared_task
+def update_category_approval_request():
+    url = "https://chat.googleapis.com/v1/spaces/AAAAJavNvqQ/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=exJDyF2pmVGcFSEgfeV97RFarCwqhc4QvXkxKtWqMTw"
+    
+
+    app_message = {
+        'text': "A category  is updated, click here to approve: http://127.0.0.1:5000/#/adminDashboard. ",
+        }
+    
+    
+    
+    message_headers = {'Content-Type': 'application/json; charset=UTF-8'}
+    http_obj = Http()
+    response = http_obj.request(
+        uri=url,
+        method='POST',
+        headers=message_headers,
+        body=dumps(app_message),
+    )
+    print(response)
+                
+@shared_task
+def delete_category_approval_request():
+    url = "https://chat.googleapis.com/v1/spaces/AAAAJavNvqQ/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=exJDyF2pmVGcFSEgfeV97RFarCwqhc4QvXkxKtWqMTw"
+    app_message = {
+        'text': 'A category is deleted, awaiting your approval '}
+    message_headers = {'Content-Type': 'application/json; charset=UTF-8'}
+    http_obj = Http()
+    response = http_obj.request(
+        uri=url,
+        method='POST',
+        headers=message_headers,
+        body=dumps(app_message),
+    )
+    print(response)
+                
 
 
 @shared_task
@@ -101,6 +245,146 @@ def generate_productDetails_csv():
             csvwriter.writerow(product_data)
 
 
-# @shared_task(ignore_result=False)
-# def sum(a,b):
-#     return a+b
+
+
+
+
+
+
+
+def send_email_with_attachment(to_address, subject, message, content="html", attachment_file=None, html_content=None):
+        msg = MIMEMultipart()
+        msg['From'] = "user1@gmail.com"
+        msg['To'] = to_address
+        msg['Subject'] = subject
+        if content == "html":
+            msg.attach(MIMEText(message, "html"))
+        else:
+            msg.attach(MIMEText(message, "plain"))
+        if attachment_file:
+            with open(attachment_file, 'rb') as attachment:
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(attachment.read())
+                encoders.encode_base64(part)
+                part.add_header('Content-Disposition', f'attachment; filename= {attachment_file}')
+                # msg.attachment(part)
+                msg.attach(part)
+
+        s=smtplib.SMTP(host=SMPTP_SERVER_HOST, port=SMPTP_SERVER_PORT)
+        s.login(SENDER_ADDRESS, SENDER_PASSWORD)
+        s.send_message(msg)
+        s.quit()
+        return True
+    
+import logging
+
+logger = logging.getLogger(__name__)
+
+    
+
+@shared_task
+def generate_send_monthly_report_via_email():
+  try:
+    today = date.today()
+    start_of_month = date(today.year, today.month, 1)
+    end_of_month = start_of_month.replace(day=28) + timedelta(days=4)
+    users = User.query.all()
+    # for customer in users:
+    #     id=customer.id 
+    # Fetch orders from the database based on the date range 
+    orders=Order.query.join(User).filter(Order.user_id==User.id, Order.order_date >= start_of_month, Order.order_date <= end_of_month).group_by(Order.user_id).all()    
+    # Creating the HTML content for the email
+    print(orders)
+    for order in orders:
+            name=order.user.username
+            email=order.user.email
+            # print(name)
+            # print(email)
+            orders_count = len(orders)
+            print(orders_count)
+            total_expenditure = sum(order.total_price for order in orders)
+            print(total_expenditure)
+            month_year = dt.now().strftime('%B %Y')
+            
+
+            html_content = f"""
+                <html>
+                    <body>
+                        
+                        <h2>Monthly Activity Report - {month_year}</h2>
+                        <p>Dear {name},</p>
+                        <p>Here is your activity report for the month of {month_year}</p>
+                        <p><strong>Total Orders Made:</strong> {orders_count}</p>
+                        <p><strong>Total Expenditure:</strong> RM{total_expenditure:.2f}</p>
+                        <p>Feel free to contact us for any queries!</p>
+                        <p>Best regards,<br>Leaf Grocery Shop</p>
+                    </body>
+                </html>
+                """
+                
+            # Saving the html content as a file
+            file_name = f"{name}'s_{month_year}_activity.html"
+            with open(file_name, "w") as f:
+                f.write(html_content)
+            send_email_with_attachment (
+                        to_address=email,
+                        subject="Monthly activity report",
+                        message="Hello {},attached your monthly report.please look into it. Hava a nice day".format(name),
+                        content="html",
+                        attachment_file=file_name,
+                        html_content=html_content
+                        
+                        )
+   
+    logger.info("Monthly report sent successfully")
+  except Exception as e:
+        # Log any exceptions that occurred
+        logger.exception("Error occurred while sending monthly report: %s", e)
+
+
+
+
+
+@shared_task
+def send_remainder_via_email():
+    current_time = datetime.utcnow()
+    inactive_time = timedelta(hours=24,minutes=0, seconds=0)
+    customers = User.query.filter(User.roles.any(Role.name == 'Customer')).all()
+    for customer in customers:
+        customer_timestamp = customer.timestamp
+
+    # Calculate the time difference between the current time and the user's timestamp
+        time_since_last_activity = current_time - customer_timestamp
+
+        if time_since_last_activity > inactive_time:
+                # print(customer)
+                send_email (
+                      to_address=customer.email,
+                      subject="We miss you",
+                      message="Hello {}! It's been a while since you've visited. Explore our latest addition to the shop since your last visit!".format(customer.username)
+                      )
+    return jsonify({"status": "success", "message": "Email should arraive in your inbox shortly"})
+
+
+def send_email(to_address, subject, message,content="text", attachment_file=None):
+   
+    msg = MIMEMultipart()
+    msg['From'] = "user1@gmail.com"
+    msg['To'] = to_address
+    msg['Subject'] = subject
+    if content == "html":
+        msg.attach(MIMEText(message, "html"))
+    else:
+        msg.attach(MIMEText(message, "plain"))
+    # if attachment_file:
+    #     with open(file_path, 'rb') as attachment:
+    #         part = MIMEBase('application', 'octet-stream')
+    #         part.set_payload(attachment.read())
+    #         encoders.encode_base64(part)
+    #         part.add_header('Content-Disposition', f'attachment; filename= {file_path}')
+    #         msg.attach(part)
+    s=smtplib.SMTP(host=SMPTP_SERVER_HOST, port=SMPTP_SERVER_PORT)
+    s.login(SENDER_ADDRESS, SENDER_PASSWORD)
+    s.send_message(msg)
+    s.quit()
+    return True

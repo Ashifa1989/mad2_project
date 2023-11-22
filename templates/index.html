@@ -27,17 +27,23 @@
       <div class="container-flex"  >
         <div class="navbar" id="navbarNavAltMarkup">
           <div class="navbar-nav" v-if="isLoggedIn">
-            
-            <router-link to="/logout" class="nav-link"
-              style="margin-left: 20px; margin-right: 20px; float: right;">Logout</router-link>
-
-            <router-link to="/cart" class="nav-link" style="margin-left: 20px; float: right;">Cart</router-link>
-            <router-link to="/all_product" class="nav-link"
-              style="margin-left: 20px; float: right;">Products Management</router-link>
-            <router-link to="/all_category" class="nav-link"
-              style="margin-left: 20px; float: right;">Category Mgmt</router-link>
-            <router-link to="/search" class="nav-link"
-              style="margin-left: 20px; float: right;">Product</router-link>
+            <div v-if="isAdmin">
+              <router-link to="/adminDashboard" class="nav-link" style="margin-left: 20px; float: right;">Admin Page</router-link>
+              <router-link to="/all_product" class="nav-link" style="margin-left: 20px; float: right;">Products Management</router-link>
+              <router-link to="/all_category" class="nav-link" style="margin-left: 20px; float: right;">Category Mgmt</router-link>
+              <router-link to="/logout" class="nav-link" style="margin-left: 20px; margin-right: 20px; float: right;">Logout</router-link>
+            </div>
+            <div v-else-if="isManager">
+              <router-link to="/managerDashboardt" class="nav-link" style="margin-left: 20px; float: right;">Manager Page</router-link>
+              <router-link to="/all_product" class="nav-link" style="margin-left: 20px; float: right;">Products Management</router-link>
+              <router-link to="/all_category" class="nav-link" style="margin-left: 20px; float: right;">Category Mgmt</router-link>
+              <router-link to="/logout" class="nav-link" style="margin-left: 20px; margin-right: 20px; float: right;">Logout</router-link>
+            </div>
+            <div v-else>
+              <router-link to="/home" class="nav-link" style="margin-left: 20px; float: right;">home</router-link>
+              <router-link to="/logout" class="nav-link" style="margin-left: 20px; margin-right: 20px; float: right;">Logout</router-link>
+              <router-link to="/cart" class="nav-link" style="margin-left: 20px; float: right;">Cart</router-link>
+            </div>
           </div>
 
           <div class="navbar-nav" v-if="!isLoggedIn">

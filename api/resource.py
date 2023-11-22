@@ -1,19 +1,24 @@
 from  flask_restful import Api, Resource,  fields, marshal_with, reqparse 
 from model import db, User as user_model, Role, Category, Product, Cart, Order, Order_item, RolesUsers, Address,Payment
-from flask_security  import   auth_required, roles_required, current_user
+from flask_security  import   auth_required, roles_required, current_user, roles_accepted
 from flask import make_response
 from flask_security.utils import hash_password, verify_password 
 from werkzeug.exceptions import HTTPException
 import json
 from datetime import datetime
-
-
-
+from tasks import send_admin_approval_request, new_category_approval_request, update_category_approval_request, delete_category_approval_request,send_email_with_attachment
+import redis
+from flask_mail import Mail, Message
+# from fpdf import FPDF
+import matplotlib.pyplot as plt
+from datetime import datetime, timedelta, date
+redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 
 from celery.result import AsyncResult
 from flask import send_file
-
+from cachedata import get_all_product, get_product_by_category, get_all_category
+from time import perf_counter_ns
 api = Api(prefix="/api")
 
 output_user_field = {
@@ -28,10 +33,45 @@ output_user_field = {
     
 }
 
+
+class send_admin_approval_request(Resource):
+    def get(self):
+        a=send_admin_approval_request.delay()
+        return{
+            "task_id": a.id,
+            "task_state" :a.state,
+            "task_result": a.result
+            }
+    
+# Route to trigger the generation and sending of the monthly report
+# @app.route('/send_monthly_report', methods=['POST'])
+# class send_monthly_report(Resource):
+#     def post(self):
+#         report_file = generate_monthly_report()
+#         result = send_email_with_attachment(report_file)
+#         return result, 200
+#     
+
+# @app.route('/send_inactive_user_email', methods=['POST'])
+# class send_inactive_email():
+#     def post(self):
+    
+#         # Queue the Celery task
+#         a=send_inactive_user_email.delay(args=[user_id])
+#         return{
+#                     "task_id": a.id,
+#                     "task_state" :a.state,
+#                     "task_result": a.result
+#                     }
+
+
 output_Category_field = {
     "category_id" : fields.Integer,
     "category_name" : fields.String,
     "imagelink" : fields.String,
+    "approve":fields.Boolean,
+    "updateRequest":fields.Boolean,
+    "deleteRequest":fields.Boolean
 }
 
 output_product_field = {
@@ -150,6 +190,7 @@ search_parser.add_argument("min_price")
 search_parser.add_argument("max_price")
 search_parser.add_argument("manufacture_date")
 search_parser.add_argument("expairy_date")
+search_parser.add_argument("quantity")
 
 cart_parser = reqparse.RequestParser()
 cart_parser.add_argument("product_id")
@@ -234,6 +275,8 @@ class UserApi(Resource):
         user_name = args.get("username", None)
         password = args.get("password",None)
         email= args.get("email", None)
+        roles = Role.query.filter_by(name = "Customer").all()
+        
 
         user = user_model.query.filter_by(username = user_name).first()
         if user:
@@ -245,19 +288,19 @@ class UserApi(Resource):
             raise AlreadyExistsError(
                 status_code=409,  error_message="Email already used")
         
-        new_user = user_model(email, hash_password(password), user_name,True)
+        new_user = user_model(email, hash_password(password), user_name,True,  roles)
 
         db.session.add(new_user)
         db.session.commit()
 
         #add customer role to the new registered user
-        role = Role.query.filter_by(name = "Customer").first()
-        role_user = RolesUsers()
-        role_user.user_id = new_user.id
-        role_user.role_id = role.id
+        # role = Role.query.filter_by(name = "Customer").first()
+        # role_user = RolesUsers()
+        # role_user.user_id = new_user.id
+        # role_user.role_id = role.id
 
-        db.session.add(role_user)
-        db.session.commit()
+        # db.session.add(role_user)
+        # db.session.commit()
 
         return ("Successfully created new user", 200)
    
@@ -301,22 +344,23 @@ class manager_api(Resource):
         password = args.get("password",None)
         email= args.get("email", None)
         user = user_model.query.filter_by(username = user_name).first()
+        roles = Role.query.filter_by(name="Manager").all() + Role.query.filter_by(name="Customer").all()
         if user:
             raise AlreadyExistsError(
                 status_code=409,  error_message="username  already exists")
         
-        new_user = user_model(email, hash_password(password), user_name, False)
+        new_user = user_model(email, hash_password(password), user_name, False,  roles)
 
         db.session.add(new_user)
         db.session.commit()
-        manager_role = Role.query.filter_by(name = "Manager" ).first()
-        customer_role = Role.query.filter_by(name="Customer").first()
-        role_manager = RolesUsers(user_id= new_user.id, role_id= manager_role.id )
-        role_customer=RolesUsers(user_id= new_user.id, role_id=customer_role.id)
+        # manager_role = Role.query.filter_by(name = "Manager" ).first()
+        # customer_role = Role.query.filter_by(name="Customer").first()
+        # role_manager = RolesUsers(user_id= new_user.id, role_id= manager_role.id )
+        # role_customer=RolesUsers(user_id= new_user.id, role_id=customer_role.id)
 
-        db.session.add(role_manager)
-        db.session.add(role_customer)
-        db.session.commit()
+        # db.session.add(role_manager)
+        # db.session.add(role_customer)
+        # db.session.commit()
         
     
         return {"message" :"Successfully created the acoount.please wait for the Admin approval"},200
@@ -329,26 +373,51 @@ class manager_api(Resource):
 class Categories(Resource):
     @marshal_with(output_Category_field)
     def get(self):
-        all_category= Category.query.all()
+        # all_category= Category.query.all()
+        all_category=get_all_category()
         return all_category
     
     # @marshal_with(output_Category_field)
     @auth_required("token")
-    @roles_required("Admin")
+    @roles_accepted("Admin", "Manager")
     def post(self):
         args= add_category_parser.parse_args()
         category_name = args.get("category_name", None)
-        # print(category_name)
+        print(category_name)
         image = args.get("imagelink", None)
         category =  Category.query.filter_by(category_name=category_name).first()
-        # print(category)
+    
         if category:
             raise AlreadyExistsError(
                 status_code=409,  error_message="category  already exists")
-        new_category=Category(category_name=category_name, imagelink=image)
-        db.session.add(new_category)
-        db.session.commit()
-        return {"message":"Successfully created new category", "status_code":200}
+        new_category=Category(category_name=category_name, imagelink=image, approve=True, updateRequest=False, deleteRequest=False )
+        
+        user_id=current_user.id
+        user=user_model.query.filter_by(id=user_id).first()
+        for  role in user.roles:
+            if role=="Admin":
+                db.session.add(new_category)
+                db.session.commit()
+                # return new_category
+                return {"message":"Category created successfully."}, 200
+            elif role=="Manager":
+                new_category.approve=False
+                db.session.add(new_category)
+                db.session.commit()
+                new_category_approval_request()
+                # return new_category
+                return {"message":"Category creation initiated! Please await admin approval."}, 200
+            else:
+                return("you are not authorized to create new category")
+            
+
+
+
+            
+            
+
+
+        
 
     
 class CategoryApi(Resource):
@@ -359,37 +428,94 @@ class CategoryApi(Resource):
         
         
         if  category is None:
-            raise SchemaValidationError(status_code=404, error_message="category not found ")
+            raise SchemaValidationError(status_code=204, error_message="category not found ")
         else:
              return category
     @auth_required("token")
-    @marshal_with(output_Category_field)
+    @roles_accepted("Admin","Manager")
+    
+    # @marshal_with(output_Category_field)
     def put(self, id):
+        
         category =  Category.query.filter_by(category_id=id).first()
         args=update_category_parser.parse_args()
         category_name = args.get("category_name", None)
         image = args.get("imagelink", None)
+        # category.category_name = category_name
+        # category.imagelink = image
+        user_id=current_user.id
+        user=user_model.query.filter_by(id=user_id).first()
+        if category is not None :
+            for role in user.roles:
+                if role=="Admin":
+                    category.category_name = category_name
+                    category.imagelink = image
+                    category.updateRequest=False
+                    db.session.commit()
+                    # return category
+                    return {"message":"Category updated scuuessfully"}, 200
+                elif role=="Manager":
+                    category.updateRequest=True
+                    db.session.commit()
+
+                    category.category_name = category_name
+                    category.imagelink = image
+                    redis_key=category.category_id
+                    redis_value = {
+                            'category_id': category.category_id,
+                            'category_name': category.category_name,
+                            'imagelink': category.imagelink
+                        }
+
+                    redis_client.set(redis_key, json.dumps(redis_value))
+                    update_category_approval_request()
+                    
+                    # return category
+                    return {"message":"Category updates initiated! Please await admin approval."}, 200
+        else:
+            raise SchemaValidationError(status_code=204, error_message="category not found")
         
-        category.category_name = category_name
-        category.imagelink = image
-        db.session.commit()
-        return category
-    
+    # @marshal_with(output_Category_field)    
+    @auth_required("token")
+    @roles_accepted("Admin","Manager")
     def delete(self, id):
         category =  Category.query.filter_by(category_id=id).first()
-        if category is None:
-            raise SchemaValidationError(status_code=404, error_message="category not found")
-        db.session.delete(category)
-        db.session.commit()
-        return ("Successfully deleted the category", 200)
+        user_id=current_user.id
+        user=user_model.query.filter_by(id=user_id).first()
+        print(user.roles)
+
+        if category is not None :
+            for role in user.roles:
+                if role=="Admin":
+                    category.deleteRequest=False
+                    db.session.delete(category)
+                    db.session.commit()
+                    return {"message":"Category deleted successfully!"}, 200
+                elif role=="Manager":
+                    category.deleteRequest=True
+                    db.session.commit()
+                    delete_category_approval_request()
+                    return {"message":"Category deletion initiated! Please await admin approval."}, 200
+        else:
+            raise SchemaValidationError(status_code=204, error_message="category not found")
+        
+        
+        
     
 class products(Resource):
     @marshal_with(output_product_field)
     def get(self):
-        product = Product.query.order_by(Product.timestamp.desc()).all()  # Sort by timestamp
-        return product
+        print("inside get all peoduct")
+        start=perf_counter_ns()
+        # product = Product.query.order_by(Product.timestamp.desc()).all()  # Sort by timestamp
+        products=get_all_product()
+        end=perf_counter_ns()
+        print("timetake", end-start)
+        return products
 
     # @marshal_with(output_product_field)
+    @auth_required("token")
+    @roles_accepted("Admin","Manager")
     def post(self):                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
         args=add_product_parser.parse_args()
        
@@ -469,7 +595,7 @@ class Product_Api(Resource):
         db.session.delete(product)
         db.session.commit()
         return ("Successfully deleted the product", 200)
-    
+
 class search_product(Resource):
     @marshal_with(output_product_field)
     def post(self):
@@ -481,13 +607,15 @@ class search_product(Resource):
         min_price = args.get('min_price')
         max_price = args.get('max_price')
         manufacture_date = args.get('manufacture_date')
+        
 
         # Start with an empty query
         query = Product.query
 
         # Add filters based on query parameters
         if category_name:
-            query = query.join(Category).filter(Category.category_name==category_name)
+            query=get_product_by_category(category_name)
+            # query = query.join(Category).filter(Category.category_name==category_name)
             
             
         if min_price:
@@ -575,7 +703,24 @@ class cart_Api(Resource):
         db.session.add(cart)
         db.session.commit()
         return cart
-    
+    @marshal_with(output_cart_field)
+    @auth_required("token")
+    def put(self):
+        user_id=current_user.id
+        #print(user_id)
+        arg = cart_parser.parse_args()
+        product_id=arg.get("product_id", None)
+        quantity = int(arg.get("quantity", 0))
+        user_id = current_user.id
+        product=Product.query.filter_by(product_id=product_id).first()
+        if product is None:
+            raise SchemaValidationError(status_code=404, error_message="sorry, No product found ")
+        cart=Cart.query.filter_by(product_id=product_id , user_id=user_id).first()
+        
+        cart.quantity= cart.quantity-quantity
+        cart.total_price = cart.quantity * cart.price_per_unit
+        db.session.commit()
+        return cart
     
     def delete(self, cart_id) :
         # print(cart_id)
@@ -747,13 +892,13 @@ class payment_api(Resource):
         else:
             raise SchemaValidationError(status_code="404", error_message="no payment details found")
 
-class Admin_approval(Resource):
+class Admin_approval_signUp_request(Resource):
     @marshal_with(output_user_field)
     def get(self):
         inactive_manager= user_model.query.filter_by(active=False).all()
         print(len(inactive_manager))
         if  len(inactive_manager) == 0 :
-            return {"status":204, "error_message":"no new Manager SignUp "}
+            return {"status":404, "error_message":"no new Manager SignUp "}
         else:
             return inactive_manager
 
@@ -762,7 +907,9 @@ class Admin_approval(Resource):
         manager.active=True
         db.session.commit()
         return {"message" : "manager role approved from admin"}, 200
-class Admin_reject(Resource):
+    
+class Admin_reject_signUp_request(Resource):
+    @roles_required("Admin")
     def put(self, id):
         manager=user_model.query.filter_by(id=id).first()
         # print(manager.active)
@@ -777,29 +924,90 @@ class Admin_reject(Resource):
                 db.session.commit()
                 return {"message" : "manager role rejected from admin"}, 200
         
-
+class Admin_Approval_category_request(Resource):
+    @marshal_with(output_Category_field)
+    def get(self):
+        Categories=Category.query.filter_by(approve=False , updateRequest=False, deleteRequest=False).all()
+        print(len(Categories))
+        if len( Categories)==0:
+             return {"status":204, "error_message":"no new category approval "}
+        else:
+            return Categories
+    @roles_required("Admin")
+    def put(self, id):
+        category= Category.query.filter_by(category_id=id).first()
+        category.approve=True
+        db.session.commit()
+        return {"message": "Admin approved the category update. Please proceed with the changes."},200
+    @roles_required("Admin")
+    def delete(self,id):
+        category=Category.query.filter_by(category_id=id).first()
+        # category.approve=True
+        db.session.delete(category)
+        db.session.commit()
+        return {"message": "Admin rejected new category request . Please proceed with the changes."},200
        
+class categoryUpdateDeleteRequest(Resource):
+    @roles_required("Admin")
+    @marshal_with(output_Category_field)
 
-# class celeryTask(Resource):
-#     def get(self):
-#         a=tasks.generate_productDetails_csv.delay()
-#         return{
-#             "task_id": a.id,
-#             "task_state" :a.state,
-#             "task_result": a.result
-#         }
-# class CeleryTaskStatus(Resource):
-#     def get(self, task_id):
-#         task = AsyncResult(task_id)
-#         return {
-#             "task_id": task.id,
-#             "task_state": task.state,
-#             "task_result": task.result
-#         }
-    
-# class download_file(Resource):
-#     def get(self):
-#         return send_file("static/product_data.csv")
+    def get(self):
+        category= Category.query.filter_by(updateRequest=True).all()
+        return category
+    @roles_required("Admin")
+    def put(self, id):
+        #retrive the category from redis
+        category_json = redis_client.get(id)
+        print(category_json)
+        # Check if the category exists in Redis
+        if category_json is None:
+            return {"errormessage": f"Category with ID {id} not found in Redis"}, 404
+
+        # Deserialize the JSON string from Redis
+        category = json.loads(category_json)
+        print(category['category_name'])
+
+        # Update the category in the database
+        db_category = Category.query.filter_by(category_id=id).first()
+
+        if db_category is not None:
+            db_category.updateRequest = False
+            db_category.category_name = category.get('category_name', db_category.category_name)
+            db_category.imagelink = category.get('imagelink', db_category.imagelink)
+
+            db.session.commit()
+            print("data after update:", db_category.category_name)
+            redis_client.delete(id)
+            return {"message": "Admin approved the category update. Please proceed with the changes."}, 200
+        else:
+            return {"errormessage": f"Category with ID {id} not found in the database"}, 404
+            
+    @roles_required("Admin")
+    def delete(self,id):
+        category=Category.query.filter_by(category_id=id).first()
+        db.session.delete(category)
+        db.session.commit()
+        return {"message": "Admin approved the category delete. Please proceed with the changes."},200
+
+class rejectCategoryUpdateDeleteRequest(Resource):
+    @roles_required("Admin")
+    @marshal_with(output_Category_field)
+    def get(self):
+        category= Category.query.filter_by(deleteRequest=True).all()
+        return category
+    @roles_required("Admin")
+    def put(self,id):
+        category= Category.query.filter_by(category_id=id).first()
+        if category.updateRequest==True:
+            category.updateRequest=False
+            db.session.commit()
+            return {"message": "Admin rejected the category update. Please proceed with the changes."},200
+        if category.deleteRequest==True:
+            category.deleteRequest=False
+            db.session.commit()
+            return {"message": "Admin rejected the category delete. Please proceed with the changes."},200
+
+
 
 
 api.add_resource(Users, "/users")
@@ -814,11 +1022,11 @@ api.add_resource(cart_Api,  "/cart/<int:cart_id>", "/cart")
 api.add_resource(Order_api, "/order","/order/<int:order_id>")
 api.add_resource(address_api, "/address", "/address/<int:id>")
 api.add_resource(payment_api, "/payment", "/payment/<int:id>")
-# api.add_resource(celeryTask, "/trigger-celery-task")
-# api.add_resource(CeleryTaskStatus, "/status/<int:task_id>")
-# api.add_resource(download_file, "/download-file")
 api.add_resource(manager_api,  "/manager/register")
-api.add_resource(Admin_approval, "/Admin_approval", "/Admin_approval/<int:id>")
-api.add_resource(Admin_reject,  "/Admin_reject/<int:id>")
-
-
+api.add_resource(Admin_approval_signUp_request, "/Admin_approval", "/Admin_approval/<int:id>")
+api.add_resource(Admin_reject_signUp_request,  "/Admin_reject/<int:id>")
+api.add_resource(Admin_Approval_category_request,  "/Admin_Approval_category_request", "/Admin_Approval_category_request/<int:id>")
+api.add_resource(categoryUpdateDeleteRequest, "/categoryUpdateRequest","/categoryUpdateRequest/<int:id>", "/categoryDeleteRequest/<int:id>")
+api.add_resource( rejectCategoryUpdateDeleteRequest, "/categoryDeleteRequest", "/rejectCategoryUpdateRequest/<int:id>",  "/rejectCategoryDeleteRequest/<int:id>")
+api.add_resource(send_admin_approval_request, "/send_admin_approval_request")
+# api.add_resource(send_monthly_report, '/send_monthly_report')

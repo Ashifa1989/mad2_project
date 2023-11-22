@@ -1,8 +1,10 @@
 const all_product = {
   template: `    
     <div>
+    
     <div v-if="success">{{ message }}</div>
-      <div class="container text-center">
+    <div class="container text-auto  mt-3">
+      <div v-if="products.length >0">
         <table class="table">
           <thead>
             <tr>
@@ -18,9 +20,8 @@ const all_product = {
               <th></th>
             </tr>
           </thead>
-          <tbody>            
-            <tr v-if="success" v-for="product in products" :key="product.product_id">
-                
+          <tbody> 
+              <tr v-if="success" v-for="product in products" :key="product.product_id">
                 <td>{{ product.product_name }}</td>
                 <td>{{ product.Catagory_id }}</td>
                 <td>{{ product.Description }}</td>
@@ -35,18 +36,17 @@ const all_product = {
                 <td>
                   <button class="btn btn-success"  @click.prevent="deleteProduct(product.product_id)" >Delete</button>
                 </td>
-                
               </tr>
               <tr v-else>
                 {{ error_message }}
               </tr> 
-          </tbody>             
-          
-          <button class="btn btn-success" @click.prevent="openProductDetails(0)"> AddProduct</button>
-        
+          </tbody>
         </table>
-      </div> 
-      <button @click="trigger_celery_task">trigger celery job</button>  
+      </div>
+        <div v-else><strong>"Currently, there are no products to display. You can start by adding a product now."</strong></div> 
+        <button type="button" class="btn btn-success mt-3" @click.prevent="openProductDetails(0)"> AddProduct</button>             
+    </div>
+        <button  @click="trigger_celery_task">trigger celery job</button>  
     </div>
     `,
   data() {
@@ -91,7 +91,8 @@ const all_product = {
         method: "delete",
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "no-store, no-cache"
+          "Cache-Control": "no-store, no-cache",
+          "Authentication-Token" : localStorage.getItem("Auth_token")
         },
 
       })
