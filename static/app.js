@@ -14,7 +14,8 @@ import address from './components/address.js'
 import payment from './components/payment.js'
 import signUpManager from './components/signUpManager.js'
 import admin from './components/adminDashboard.js'
-
+import userOrder from './components/userorder.js'
+import managerDashboard from './components/managerDashboard.js'
 
 const routes = [
     { path: '/home', component: home },
@@ -33,6 +34,8 @@ const routes = [
     { path: '/payment', component: payment },
     { path: '/signUpManager', component: signUpManager },
     {path : '/adminDashboard', component : admin},
+    {path : '/userOrder', component : userOrder},
+    {path : '/managerDashboard', component : managerDashboard},
 ]
 
 const router = new VueRouter({

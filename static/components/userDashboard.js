@@ -21,27 +21,27 @@ const home = {
                   <input type="text" class="form-control" placeholder="product name" v-model="searchQuery.search_word"></input>
               </div>
               <div class="col">
-                  <button class="btn btn-primary" @click.prevent="searchProducts">Search</button>
+                  <button class="btn btn-success" @click.prevent="searchProducts">Search</button>
               </div>
           </div>
       </div>
   </form>
 
   <p></p>
-  <div class="row row-cols-1 row-cols-md-4 g-4">
+  <div class="row row-cols-1 row-cols-md-4 mb-4 g-4">
     <div v-if="success" v-for="product in products">
       <div class="col">
         <div class="card h-100">
           <img :src=" product.image_url " class="card-img-top" alt="...">
           <div class="card-body">
-            <div>
+            
               <h5 class="card-title">{{ product.product_name }}</h5>
               <p class="card-text">{{ product.Description }} </p>
-              <div> Price: {{ product.price_per_unit }} </div>
-              
-            </div>
+              <div> Price: RM{{ product.price_per_unit }}/kg </div>
+              <div style="color: red" v-if="product.Stock <=0">Out Of Stock</div>
+            
             <br></br>
-              <button class="btn btn-primary" @click.prevent="addtoCart(product.product_id)">Add to Cart</button>
+              <button class="btn btn-success" @click.prevent="addtoCart(product)">Add to Cart</button>
           </div>
         </div>
       </div>
@@ -71,6 +71,7 @@ const home = {
       },
       success: true,
       error_message: "",
+       apiBaseUrl: "http://127.0.0.1:5000/api/"
       
     };
   },
@@ -93,7 +94,12 @@ const home = {
     async getCategories() {
       // const token=this.validateToken()
       // if (token){
-      const response = await fetch("http://127.0.0.1:5000/api/category");
+      const response = await fetch(`${this.apiBaseUrl}/category`,{
+        headers: {
+          "Content-Type": "application/json",
+          "Authentication-Token" : localStorage.getItem("Auth_token")
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         this.categories = data.filter(category=>category.approve==true);
@@ -107,7 +113,7 @@ const home = {
 
 
     async searchProducts() {
-      const res = await fetch("http://127.0.0.1:5000/api/product/search", {
+      const res = await fetch(`${this.apiBaseUrl}/product/search`, {
         method: "post",
         headers: {
           "Content-Type": "application/json",
@@ -154,27 +160,34 @@ const home = {
     //   }
     // },
     
-    async addtoCart(id) {
-      this.product.product_id = id
-      this.product.quantity = 1
-      const res = await fetch(`http://127.0.0.1:5000/api/cart`, {
-        method: "post",
-        headers: {
-          "Content-Type": "application/json",
-          "Authentication-Token": localStorage.getItem("Auth_token")
-        },
-        body: JSON.stringify(this.product)
-      })
+    async addtoCart(product) {
+      console.log(product.Stock)
+      if(product.Stock == 0){
+        this.success=false
+        this.error_message="currently this product is out of stock"
+      
+      }
+        else{
+          this.success=true
+        const res = await fetch(`${this.apiBaseUrl}/cart`, {
+          method: "post",
+          headers: {
+            "Content-Type": "application/json",
+            "Authentication-Token": localStorage.getItem("Auth_token")
+          },
+          body: JSON.stringify({product_id:product.product_id, quantity:1})
+        })
 
-      if (res.ok) {
-        alert("Item added to cart")
-        //this.$router.push("/cart")
+        if (res.ok) {
+          alert("Item added to cart")
+          //this.$router.push("/cart")
+        }
+        else {
+          console.log("something went wrong")
+        }
       }
-      else {
-        console.log("something went wrong")
-      }
-    },
-  },
+    }
+}
 }
 
 export default home

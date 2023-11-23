@@ -63,12 +63,18 @@ const product = {
             categories: "",
             success: true,
             error_message: "",
-            message:""
+            message:"",
+            apiBaseUrl: "http://127.0.0.1:5000/api"
         }
     },
     methods: {
         async getCategories() {
-            const response = await fetch("http://127.0.0.1:5000/api/category");
+            const response = await fetch(`${this.apiBaseUrl}/category`,{
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authentication-Token" : localStorage.getItem("Auth_token")
+                  },
+            });
             if (response.ok) {
                 const data = await response.json();
                 console.log("approvedata",data)
@@ -86,10 +92,17 @@ const product = {
             this.selectedproductId = this.$route.params.id
             if (this.selectedproductId > 0) {
                 //get product details from api using productId and assignb to this.product
-                const res = await fetch(`http://127.0.0.1:5000/api/product/${this.selectedproductId}`)
+                const res = await fetch(`${this.apiBaseUrl}/product/${this.selectedproductId}`,{
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authentication-Token" : localStorage.getItem("Auth_token")
+                      },
+                })
 
                 if (res.ok) {
                     const data = await res.json()
+                    console.log(data.Stock)
+
                     this.product = data
                 }
                 else {
@@ -103,7 +116,7 @@ const product = {
         },
         async create_update_Product() {
             if (this.selectedproductId == 0) {
-                const res = await fetch("http://127.0.0.1:5000/api/product", {
+                const res = await fetch(`${this.apiBaseUrl}/product`, {
                     method: "post",
                     headers: {
                         "content-type": "application/json",
@@ -124,7 +137,7 @@ const product = {
             }
             else {
                 console.log(this.selectedproductId)
-                const res = await fetch(`http://127.0.0.1:5000/api/product/${this.selectedproductId}`, {
+                const res = await fetch(`${this.apiBaseUrl}/product/${this.selectedproductId}`, {
                     method: "put",
                     headers: {
                         "content-type": "application/json",

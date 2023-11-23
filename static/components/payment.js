@@ -75,7 +75,8 @@ const payment={
             }],
             payment:{},
             success:true,
-            error_message:""
+            error_message:"",
+            apiBaseUrl: "http://127.0.0.1:5000/api/"
         }
 
     },
@@ -86,7 +87,7 @@ const payment={
         async Add_update_payment() {
             console.log(this.payment.payment_id)
             if (this.payment.payment_id == 0) {
-                const res = await fetch("http://127.0.0.1:5000/api/payment", {
+                const res = await fetch(`${this.apiBaseUrl}/payment`, {
                     method: "post",
                     headers: {
                         "Content-Type": "application/json",
@@ -105,7 +106,7 @@ const payment={
             }
             else {
                 
-                const res = await fetch(`http://127.0.0.1:5000/api/payment/${this.payment.payment_id}`, {
+                const res = await fetch(`${this.apiBaseUrl}/payment/${this.payment.payment_id}`, {
                     method: "put",
                     headers: {
                         "Content-Type": "application/json",
@@ -128,7 +129,7 @@ const payment={
         
         async deletepayment(id) {
             console.log(id)
-            const res = await fetch(`http://127.0.0.1:5000/api/payment/${id}`, {
+            const res = await fetch(`${this.apiBaseUrl}/payment/${id}`, {
                 method: "delete",
                 headers: {
                     "Content-Type": "application/json",
@@ -152,21 +153,15 @@ const payment={
         },
         async setpayment() {
             this.payment = {};
-            this.payment.payment_id = 0;
-            
+            this.payment.payment_id = 0;  
         },
-        
-
     },
     created(){
         this.get_payment=useGetPayments
     },
     async mounted(){
-        
         console.log("i am here")
-        this.payments= await this.get_payment()
-        
-        
+        this.payments= await this.get_payment() 
     },
 }
 export default payment

@@ -32,14 +32,15 @@ data() {
         },
         error_message : "",
         success : true,
-        message:""
+        message:"",
+        apiBaseUrl: "http://127.0.0.1:5000/api/"
 
         }
     },
 
     methods : {
         async signUpUser() {
-            const res = await fetch(`http://127.0.0.1:5000/api/manager/register`,{
+            const res = await fetch(`${this.apiBaseUrl}/manager/register`,{
                 method : "post",
                 headers : {
                     "content-type" : "application/json",

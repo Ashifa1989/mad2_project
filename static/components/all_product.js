@@ -46,7 +46,7 @@ const all_product = {
         <div v-else><strong>"Currently, there are no products to display. You can start by adding a product now."</strong></div> 
         <button type="button" class="btn btn-success mt-3" @click.prevent="openProductDetails(0)"> AddProduct</button>             
     </div>
-        <button  @click="trigger_celery_task">trigger celery job</button>  
+        <button  @click="DownloadCSVFile">Download CSV</button>  
     </div>
     `,
   data() {
@@ -66,7 +66,9 @@ const all_product = {
       Product: {},
       success: true,
       error_message: "",
-      message: ""
+      message: "",
+      notifymessage,
+      apiBaseUrl: "http://127.0.0.1:5000/api/"
     }
   },
 
@@ -74,7 +76,12 @@ const all_product = {
 
     async getProducts() {
 
-      const res = await fetch("http://127.0.0.1:5000/api/product");
+      const res = await fetch("http://127.0.0.1:5000/api/product",{
+        headers: {
+          "Content-Type": "application/json",
+          "Authentication-Token" : localStorage.getItem("Auth_token")
+        },
+      });
       console.log(res)
       if (res.ok) {
         const data = await res.json();
@@ -91,32 +98,27 @@ const all_product = {
         method: "delete",
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "no-store, no-cache",
+          // "Cache-Control": "no-store, no-cache",
           "Authentication-Token" : localStorage.getItem("Auth_token")
         },
 
       })
       if (response.ok) {
-        this.message = ("deleted the product successfully")
-        const response = await fetch("http://127.0.0.1:5000/api/product")
-        if (response.ok) {
-          const data = await response.json();
-          this.categories = data;
-          this.message = ("deleted the product successfully")
-           
-        }
-      }
-      else {
-        const errorData = await response.json();
-        this.error_message = errorData.error_message;
-      }
+        this.message = "deleted the product successfully"
+        alert(this.message)
+        this.$router.go(0)
+      
+       }
     },
-    async trigger_celery_task(){
-      const res=await fetch("/trigger-celery-task")
+    async DownloadCSVFile(){
+      const res=await fetch("/DownloadCSVFile")
       if(res.ok){
           const data= await res.json()
           console.log("details of celery job", data)
           window.location.href="/download-file"
+          const notifyres=await fetch("/notify_manager_csv_download")
+          const notifydata= await notifyres.json()
+          this.notifymessage=notifydata.message
       }
   },
     async openProductDetails(id) {

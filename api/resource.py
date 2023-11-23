@@ -6,7 +6,7 @@ from flask_security.utils import hash_password, verify_password
 from werkzeug.exceptions import HTTPException
 import json
 from datetime import datetime
-from tasks import send_admin_approval_request, new_category_approval_request, update_category_approval_request, delete_category_approval_request,send_email_with_attachment
+from tasks import send_admin_approval_request, new_category_approval_request, update_category_approval_request, delete_category_approval_request
 import redis
 from flask_mail import Mail, Message
 # from fpdf import FPDF
@@ -19,6 +19,11 @@ from celery.result import AsyncResult
 from flask import send_file
 from cachedata import get_all_product, get_product_by_category, get_all_category
 from time import perf_counter_ns
+# import logging
+
+# logger = logging.getLogger(__name__)
+
+
 api = Api(prefix="/api")
 
 output_user_field = {
@@ -97,7 +102,8 @@ output_cart_field = {
     "price_per_unit" : fields.Float,
     "image_url" : fields.String,
     "quantity" : fields.Integer,
-    "total_price":fields.Float,  
+    "total_price":fields.Float, 
+     "Stock" : fields.Integer, 
 }
 
 output_order_field={
@@ -237,31 +243,14 @@ class Users(Resource):
              raise SchemaValidationError(status_code="404", error_message="users not found")
         else:
             return all_user 
-    # # @marshal_with(output_user_field)
-    # def post(self):  #login user
-    #     args = user_register_parser.parse_args()
-    #     print(args)
-    #     user_name = args.get("username", None)
-    #     password = args.get("password",None)
-    #     user=user_model.query.filter_by(username=user_name).first()
-    #     if(user):
-        
-    #         success = verify_password (password=password, password_hash=user.password)
-                
-    #         if (success):
-    #             login_user(user)
-    #             token = user.get_auth_token()
-    #             return {'username': user_name, 'id' : user.id, 'token': token}, 200 
-    #         else:
-    #             raise SchemaValidationError(status_code=404, error_message="Invalid username or password")          
-    #     else:
-    #         raise SchemaValidationError(status_code=404, error_message="Invalid username or password")
+    
 
 class UserApi(Resource):    
     @auth_required("token")
     @marshal_with(output_user_field)    
     def get(self):
         id = current_user.id
+        
         user=user_model.query.filter_by(id=id).first()
         # print(user.roles[0])
         if user:
@@ -303,10 +292,12 @@ class UserApi(Resource):
         # db.session.commit()
 
         return ("Successfully created new user", 200)
-   
+    
     # @marshal_with(output_user_field)
     def put(self): #update user information
         id=current_user.id
+        # if id is None:
+        #     return {"error_message":"you are not logged In!! please login " , "status_code":401}
         user = user_model.query.filter_by(id = id).first()
         if user is None :
              raise SchemaValidationError(status_code=404, error_message="user not found")
@@ -371,6 +362,7 @@ class manager_api(Resource):
 
 
 class Categories(Resource):
+    @auth_required("token")
     @marshal_with(output_Category_field)
     def get(self):
         # all_category= Category.query.all()
@@ -421,7 +413,7 @@ class Categories(Resource):
 
     
 class CategoryApi(Resource):
-    
+    @auth_required("token")
     @marshal_with(output_Category_field)
     def get(self, id):
         category =  Category.query.filter_by(category_id=id).first()
@@ -436,6 +428,7 @@ class CategoryApi(Resource):
     
     # @marshal_with(output_Category_field)
     def put(self, id):
+
         
         category =  Category.query.filter_by(category_id=id).first()
         args=update_category_parser.parse_args()
@@ -503,6 +496,7 @@ class CategoryApi(Resource):
         
     
 class products(Resource):
+    @auth_required("token")
     @marshal_with(output_product_field)
     def get(self):
         print("inside get all peoduct")
@@ -512,10 +506,11 @@ class products(Resource):
         end=perf_counter_ns()
         print("timetake", end-start)
         return products
-
-    # @marshal_with(output_product_field)
+    
+    
     @auth_required("token")
     @roles_accepted("Admin","Manager")
+    @marshal_with(output_product_field)
     def post(self):                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
         args=add_product_parser.parse_args()
        
@@ -545,19 +540,21 @@ class products(Resource):
 
 
 class Product_Api(Resource):
-     
+    @auth_required("token")
     @marshal_with(output_product_field)
     def get(self,id): 
         
         product = Product.query.filter_by(product_id=id).first()
+            
         
         # print(product)
         if product is None:
              raise SchemaValidationError(status_code=404, error_message="sorry!! No product  found")
         return product
 
-    
-    # @marshal_with(output_product_field)
+    @auth_required("token")
+    @roles_accepted("Admin","Manager")
+    @marshal_with(output_product_field)
     def put(self, id):
         update_product= Product.query.filter_by(product_id=id).first()
         if update_product is None:
@@ -587,7 +584,9 @@ class Product_Api(Resource):
         return ("Successfully update_product", 200)
     
 
-    
+    @auth_required("token")
+    @roles_accepted("Admin","Manager")
+    @marshal_with(output_product_field)
     def delete(self, id):
         product= Product.query.filter_by(product_id=id).first()
         if product is None:
@@ -794,7 +793,14 @@ class Order_api(Resource):
          
         db.session.commit()
         return order_item
-    
+class allOrder(Resource):
+    @marshal_with(output_order_field)
+    def get(self):
+        id=current_user.id
+        print(id)
+        orders=Order.query.filter_by(user_id=id).all()
+        print(orders)
+        return orders 
 class address_api(Resource):
     @marshal_with(output_address_field)
     def get(self):
@@ -1030,3 +1036,4 @@ api.add_resource(categoryUpdateDeleteRequest, "/categoryUpdateRequest","/categor
 api.add_resource( rejectCategoryUpdateDeleteRequest, "/categoryDeleteRequest", "/rejectCategoryUpdateRequest/<int:id>",  "/rejectCategoryDeleteRequest/<int:id>")
 api.add_resource(send_admin_approval_request, "/send_admin_approval_request")
 # api.add_resource(send_monthly_report, '/send_monthly_report')
+api.add_resource(allOrder,"/allOrder")

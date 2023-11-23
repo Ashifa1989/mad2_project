@@ -140,7 +140,6 @@ const admin={
       const res=await fetch("http://127.0.0.1:5000/api/Admin_approval",{
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "no-store, no-cache",
           "Authentication-Token" : localStorage.getItem("Auth_token")
         },
       })

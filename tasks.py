@@ -20,117 +20,8 @@ import smtplib
 from smtplib import SMTP
 from flask import jsonify
 from datetime import datetime as dt, timedelta, date
-
-
-SMPTP_SERVER_HOST="192.168.0.160"
-SMPTP_SERVER_PORT= 1025
-SENDER_ADDRESS="email@user1.com"
-SENDER_PASSWORD=""
-
-
-
-# redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
-
-# def object_to_base64(obj):
-#     return base64.b64encode(pickle.dumps(obj)).decode('utf-8')
-
-# def base64_to_object(b64_string):
-#     return pickle.loads(base64.b64decode(b64_string.encode('utf-8')))
-
-
-
-
-
-# @shared_task
-# def notify_inactive_users():
-#     current_time = datetime.utcnow()
-#     inactive_time = timedelta(hours=0,minutes=0, seconds=0)
-#     # Retrieve users and their timestamps from the database
-#     users = User.query.all()  # Query your user model
-
-#     # Iterate through the users
-#     for user in users:
-#     #     user_timestamp = user.timestamp
-
-#     # # Calculate the time difference between the current time and the user's timestamp
-#     #     time_since_last_activity = current_time - user_timestamp
-
-#     #     if time_since_last_activity > inactive_time:
-#             # send_inactive_user_emails(user.id)
-#             send_remainder_via_email(id)
-
-# @shared_task
-# def send_remainder_via_email():
-#     # user=user.query.filter_by(id=id).first()
-#     send_email (
-
-#         to_address="email@user1.com",
-#         subject="Inactive user notification",
-#         message="Hello! It's been a while since you've visited. Explore our latest addition to the shop since your last visit!"
-
-#     )
-#     return "Email should arraive in your inbox shortly"
-
-
-# def send_email(to_address, subject, message,content="text", attachment_file=None):
-   
-#     msg = MIMEMultipart()
-#     msg['From'] = SENDER_ADDRESS
-#     msg['To'] = to_address
-#     msg['Subject'] = subject
-#     if content == "html":
-#         msg.attach(MIMEText(message, "html"))
-#     else:
-#         msg.attach(MIMEText(message, "plain"))
-#     if attachment_file:
-#         with open(file_path, 'rb') as attachment:
-#             part = MIMEBase('application', 'octet-stream')
-#             part.set_payload(attachment.read())
-#             encoders.encode_base64(part)
-#             part.add_header('Content-Disposition', f'attachment; filename= {file_path}')
-#             msg.attach(part)
-#     s=smtplib.SMTP(host=SMPTP_SERVER_HOST, port=SMPTP_SERVER_PORT)
-#     s.login(SENDER_ADDRESS, SENDER_PASSWORD)
-#     s.send_message(msg)
-#     s.quit()
-#     return True
-
-# def send_inactive_user_emails(id):
-#     user=User.query.filter_by(id=id).first()
-#     recipient_email = user.email
-
-#     msg = Message('Inactive User Reminder',
-#             sender='use1@example.com',
-#             recipients=[recipient_email])
-#     msg.body = 'You have been inactive for more than 24 hours. Please log in to stay updated.'
-#     # mail.send(msg)
-#     with SMTP('localhost', 1025) as smtp:  # Use MailHog SMTP server settings
-#         smtp.send_message(msg)
-
-# @celery_app.on_after_finalize.connect
-# def setup_periodic_tasks(sender, **kwargs):
-#     sender.add_periodic_task(
-#         crontab(hour=17, minute=2),  # Schedule daily at midnight
-#         notify_inactive_users.s(),  # Task to execute
-#         name="notify_inactive_users_daily"  # Name of the task
-#     )
-# def send_notification(user_id):
-#     url = "https://chat.googleapis.com/v1/spaces/AAAAJavNvqQ/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=exJDyF2pmVGcFSEgfeV97RFarCwqhc4QvXkxKtWqMTw"
-#     app_message = {
-#         'text': ' we missed you. You have been inactive for more than 24 hours'}
-#     message_headers = {'Content-Type': 'application/json; charset=UTF-8'}
-#     http_obj = Http()
-#     response = http_obj.request(
-#         uri=url,
-#         method='POST',
-#         headers=message_headers,
-#         body=dumps(app_message),
-#     )
-#     print("senting notification")
-
-# class config:
-#     googleApiUrl = ""
-
+from config import *
+from flask_security import current_user
 
 
 @shared_task
@@ -147,21 +38,15 @@ def send_admin_approval_request():
         body=dumps(app_message),
     )
     print(response)
-# @shared_task
-# def admin_approval(id):
-#     user=user.query.filter_by(id=id).first()
-#     if user and "manager" in user.roles:
-#         user.active=True
-#         db.session.commit()
-#         # send_mail_tomanger(user.id)
-    
+
 
 
 @shared_task
 def new_category_approval_request():
     url = "https://chat.googleapis.com/v1/spaces/AAAAJavNvqQ/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=exJDyF2pmVGcFSEgfeV97RFarCwqhc4QvXkxKtWqMTw"
     app_message = {
-        'text': 'A new category has been created and is awaiting your approval '}
+        'text': "A category  is created, click here to approve: http://127.0.0.1:5000/#/adminDashboard. ",
+        }
 
     message_headers = {'Content-Type': 'application/json; charset=UTF-8'}
     http_obj = Http()
@@ -198,7 +83,8 @@ def update_category_approval_request():
 def delete_category_approval_request():
     url = "https://chat.googleapis.com/v1/spaces/AAAAJavNvqQ/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=exJDyF2pmVGcFSEgfeV97RFarCwqhc4QvXkxKtWqMTw"
     app_message = {
-        'text': 'A category is deleted, awaiting your approval '}
+        'text': "A category  is deleted, click here to approve: http://127.0.0.1:5000/#/adminDashboard. ",
+        }
     message_headers = {'Content-Type': 'application/json; charset=UTF-8'}
     http_obj = Http()
     response = http_obj.request(
@@ -243,7 +129,8 @@ def generate_productDetails_csv():
             
             # Write the product data to the CSV
             csvwriter.writerow(product_data)
-
+    print("CSV file generation completed successfully!")
+    return True
 
 
 
@@ -388,3 +275,13 @@ def send_email(to_address, subject, message,content="text", attachment_file=None
     s.send_message(msg)
     s.quit()
     return True
+
+@shared_task
+def notify_manager_for_Download_csv_via_email(id):
+    
+    manager = User.query.filter(User.id == id).first()
+    send_email(to_address=manager.email,
+                        subject="Export CSV",
+                        message="Dear {}, I wanted to inform you that  downloading the product information CSV file has been successfully executed.".format(manager.username),
+                        ) 
+    return jsonify({"status": "success", "message": "Email should arraive in your inbox shortly"})

@@ -111,8 +111,8 @@ def setup_periodic_tasks_for_monthly_report(sender, **kwargs):
 
 
 
-@app.route("/trigger-celery-task")
-def celeryTask():
+@app.route("/DownloadCSVFile")
+def DownloadCSVFile():
     
         a=tasks.generate_productDetails_csv.delay()
         return{
@@ -133,6 +133,20 @@ def CeleryTaskStatus(task_id):
 @app.route("/download-file")    
 def download_file():
         return send_file("static/product_data.csv")
+
+
+@app.route("/notify_manager_csv_download/<id>")
+def notify_manager_csv_download(id):
+    try:
+        a=tasks.notify_manager_for_Download_csv_via_email.delay(id)
+        return{
+                "task_id": a.id,
+                "task_state" :a.state,
+                "task_result": a.result
+                
+            }
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 # @app.route("/send_admin_approval_request")
 # def send_admin_approval_request():

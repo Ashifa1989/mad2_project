@@ -1,0 +1,22 @@
+.leaf{
+    width:100px; 
+    height:  40px;
+    border-radius: 0 100%;
+    text-align: center;
+    background-image: linear-gradient(to right, rgb(21, 241, 100), rgb(122, 46, 112));
+}
+.logo-container {
+    display: flex;
+    align-items: center;
+  }
+
+  
+  
+  .card-img-top {
+    height: 200px; /* Set the desired height for the images */
+    object-fit: cover; /* Maintain aspect ratio and cover the entire container */
+    width: 100%; /* Ensure the image takes up the entire width of its container */
+  }
+
+
+  

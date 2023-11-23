@@ -7,9 +7,7 @@ export async function useGetPayments() {
             "Authentication-Token": localStorage.getItem("Auth_token")
         },
     });
-
-        const data = await res.json()
-        return data; 
-    
+    const data = await res.json()
+    return data;
       
 }

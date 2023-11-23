@@ -74,6 +74,7 @@ const address = {
             success: true,
             message: "",
             error_message: "",
+            apiBaseUrl: "http://127.0.0.1:5000/api/"
         }
     },
     methods: {

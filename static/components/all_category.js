@@ -82,12 +82,18 @@ const all_category = {
       },
       success: true,
       error_message: "",
-      message:""
+      message:"",
+      
     }
   },
   methods: {
     async getCategories() {
-      const response = await fetch("http://127.0.0.1:5000/api/category");
+      const response = await fetch("http://127.0.0.1:5000/api/category",{
+        headers: {
+          "Content-Type": "application/json",
+          "Authentication-Token" : localStorage.getItem("Auth_token")
+        },
+      });
       console.log(response)
       if (response.ok) {
         const data = await response.json();
@@ -172,7 +178,7 @@ const all_category = {
           method: "put",
           headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "no-store, no-cache",
+            // "Cache-Control": "no-store, no-cache",
             "Authentication-Token" : localStorage.getItem("Auth_token")
           },
           body: JSON.stringify(this.cat)

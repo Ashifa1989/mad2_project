@@ -24,11 +24,11 @@ const cart = {
                             <li class="list-group-item d-flex justify-content-between lh-sm">
                                 <div>
                                     <div><h5 class="my-0 "  <a href="/#/home" class="text-dark">{{product.product_name}} </a></h5></div>
-                                    <div><small class="text-body-secondary">Quantity: {{product.quantity}} </small></div>
+                                    <div ><small class="text-body-secondary">Quantity: {{product.quantity}} </small></div>
                                     <div>
                                       <button @click="decrementQuantity(product)">-</button>
                                         {{ product.quantity }}
-                                      <button @click="incrementQuantity(product.product_id)">+</button>
+                                      <button @click="incrementQuantity(product)">+</button>
                                     </div>
                                     <div><small class="text-body-secondary">Price per unit: {{product.price_per_unit}}</small></div>
                                     
@@ -128,6 +128,7 @@ const cart = {
       products: [],
       success: true,
       cart_total_amount: 0,
+      total_price:0,
       address: {},
       payment: {},
       error_message: "Your cart is empty!! Continue shopping to browse and search for items.",
@@ -243,87 +244,63 @@ const cart = {
         this.error_message = errorData.error_message
       }
     },
-    async incrementQuantity(id) {
-      // Assuming this.product.quantity is the current quantity in the cart
-      this.product.product_id = id;
-      console.log("Product ID:", this.product.product_id);
-
-      // Fetch all cart data
-      const cartDataResponse = await fetch(`http://127.0.0.1:5000/api/cart`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authentication-Token": localStorage.getItem("Auth_token")
-        }
-      });
-
-      if (cartDataResponse.ok) {
-        const cartData = await cartDataResponse.json();
-        console.log(cartData)
-        // Find the product in the cart based on its ID
-        console.log("id=", id)
-        const productInCart = cartData.find(product => product.product_id == id);
-        console.log(productInCart.quantity)
-
-        if (productInCart) {
-          // update the quantity
-          const updatedQuantity = productInCart.quantity + 1;
-          console.log(updatedQuantity)
-
-
-          // Update the cart with the new quantity
-          const updateCartResponse = await fetch(`http://127.0.0.1:5000/api/cart`, {
+    async incrementQuantity(product) {
+          const updateCartResponse = await fetch(`${this.apiBaseUrl}/cart`, {
             method: "post",
             headers: {
               "Content-Type": "application/json",
               "Authentication-Token": localStorage.getItem("Auth_token")
             },
-            body: JSON.stringify({ product_id: id, quantity: 1 })
+            body: JSON.stringify({ product_id: product.product_id, quantity: 1 })
           });
 
           if (updateCartResponse.ok) {
-            console.log("successful, update the local quantity")
-            this.product.quantity = updatedQuantity
-            this.getCart()
-
-          } else {
-            console.log("Product not found in cart");
+            console.log("successfully update the product quantity")
+            product.quantity++
+            console.log(product.total_price)
+            product.total_price=product.quantity*product.price_per_unit
+            console.log(product.total_price)
+            // this.getCart()
           }
-        } else {
-          console.log("Failed to fetch cart data");
-        }
-      }
-    },
+           else {
+            this.success = false
+            this.error_message="something went wrong !! please try again";
+          }
+        },
+        
+       
+    
 
-    async decrementQuantity(prd) {
+    async decrementQuantity(product) {
+        if (product.quantity > 1) {
+          // Update the cart with the new quantity
+          const updateCartResponse = await fetch(`${this.apiBaseUrl}/cart`, {
+            method: "put",
+            headers: {
+              "Content-Type": "application/json",
+              "Authentication-Token": localStorage.getItem("Auth_token")
+            },
+            body: JSON.stringify({ product_id: product.product_id, quantity: 1 })
+          });
 
-      //console.log("Product ID:", prd.product_id);
-      if (prd.quantity > 1) {
-        // Update the cart with the new quantity
-        const updateCartResponse = await fetch(`http://127.0.0.1:5000/api/cart`, {
-          method: "put",
-          headers: {
-            "Content-Type": "application/json",
-            "Authentication-Token": localStorage.getItem("Auth_token")
-          },
-          body: JSON.stringify({ product_id: prd.product_id, quantity: 1 })
-        });
-
-        if (updateCartResponse.ok) {
-          //refresh cart after decrement via API/DB call
-          //this.getCart()
-          //refresh cart using variable
-          prd.quantity --;
+          if (updateCartResponse.ok) {
+            //refresh cart after decrement via API call
+            //this.getCart()
+            //refresh cart using variable
+            product.quantity --;
+            product.total_price=product.quantity*product.price_per_unit
+          }
+          else {
+            this.success = false
+            this.error_message="something went wrong !! please try again";
+          }
         }
         else {
-          console.log("Cart update via API call failed");
+          this.success = false
+          this.error_message = "Quantity less than 1 decrement not allowed"
         }
-      }
-      else {
-        this.message = false
-        this.error_message = "Quantity less than 1 decrement not allowed"
-      }
     }
+  
   },
   created() {
     this.getAddress = useGetAddresses

@@ -31,7 +31,8 @@ const login = {
         email: ""
       },
       success: true,
-      error_message: "something went wrong"
+      error_message: "something went wrong",
+      apiBaseUrl: "http://127.0.0.1:5000/api/"
     }
   },
   props: ['isLoggedIn'],
@@ -42,7 +43,7 @@ const login = {
         method: "post",
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "no-store, no-cache"
+          // "Cache-Control": "no-store, no-cache"
         },
         body: JSON.stringify(this.formData)
       })
@@ -63,7 +64,7 @@ const login = {
         localStorage.setItem('tokenExpiration', tokenExpiration);
         
 
-        const response = await fetch(`http://127.0.0.1:5000/api/user`, {
+        const response = await fetch(`${this.apiBaseUrl}/user`, {
           headers: {
             "Content-Type": "application/json",
             "Authentication-Token": localStorage.getItem("Auth_token")

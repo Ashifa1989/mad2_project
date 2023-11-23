@@ -1,2 +1,6 @@
 product_id,product_name,Description,Catagory_id,price_per_unit,Stock,image_url,manufacture_date,expairy_date,timestamp,quantity
-1,milk,made in malaysia,2,5.0,100,,2023-11-14,2023-11-30,2023-11-14 10:06:27.534718,
+1,Full cream milk,Product of Australia. Freshly packed in Australia,19,8.0,100,"https://cdn.metcash.media/image/upload/w_1500,h_1500,c_pad,b_auto/igashop/images/31585.jpg",2023-08-01,2023-12-30,2023-11-22 16:47:58.733996,
+2,Orange,product of Malaysia. ,17,2.0,50,https://th.bing.com/th/id/OIP.FSgOs2JI_SzY0UBhWiyiNQHaGb?rs=1&pid=ImgDetMain,2023-11-01,2023-12-30,2023-11-22 16:51:01.953483,
+3,chicken,product of Malaysia. ,18,12.0,86,https://i.ytimg.com/vi/qTcvt23MV2A/maxresdefault.jpg,2023-11-22,2023-12-15,2023-11-22 16:56:07.928269,
+4,Broccoli,Product of Thailand,20,10.0,97,https://th.bing.com/th/id/OIP.oDkhsHIkSOUq9GOabDjdBAHaGt?rs=1&pid=ImgDetMain,2023-11-25,2023-11-30,2023-11-22 17:34:49.577213,
+5,ash 123,hello,20,12.0,0,https://th.bing.com/th/id/OIP.FSgOs2JI_SzY0UBhWiyiNQHaGb?rs=1&pid=ImgDetMain,2023-11-30,2023-11-30,2023-11-23 10:33:31.533135,

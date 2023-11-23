@@ -62,7 +62,7 @@ class Category(db.Model):
     approve= db.Column(db.Boolean())
     updateRequest=db.Column(db.Boolean())
     deleteRequest=db.Column(db.Boolean())
-    product = db.relationship('Product', backref='category', lazy="subquery") # one to many relation btw catogory and product
+    product = db.relationship('Product', backref='category',cascade ="all", lazy="subquery") # one to many relation btw catogory and product
 
 class Product(db.Model):
     __tablename__ = "product"

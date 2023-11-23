@@ -26,13 +26,14 @@ const order = {
             },
             message: "",
             success: true,
-            error_message: ""
+            error_message: "",
+            apiBaseUrl: "http://127.0.0.1:5000/api/"
         }
     },
 
     methods: {
         async OrderLIst(id) {
-            const res = await fetch(`http://127.0.0.1:5000/api/order/${id}`, {
+            const res = await fetch(`${this.apiBaseUrl}/order/${id}`, {
                 headers: {
                     "Content-Type": "application/json",
                     "Authentication-Token": localStorage.getItem("Auth_token")
@@ -49,11 +50,13 @@ const order = {
                 this.success = false
                 this.error_message = errorData.error_message
             }
-        }
+        },
+        
     },
     mounted() {
         this.message = "your order is successful.thank you for shopping with us "
         this.OrderLIst(this.$route.params.id)
+        
     },
 }
 
