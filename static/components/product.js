@@ -1,12 +1,13 @@
 
 const product = {
     template: `<div>
+    <div v-if="successfirst">
     <div v-if="success"><strong> {{ message }}</strong></div>
     <div v-else><strong> {{ error_message }}</strong></div>
     <form >
         <div class="mb-3">
             <label for="productName" class="form-label">Product Name:</label>
-            <input type="text" class="form-control" id="productName" placeholder="name" v-model="product.product_name" required></input>
+            <input type="text" class="form-control" id="productName" placeholder="Name" v-model="product.product_name" required></input>
         </div>
         <div class="mb-3">   
             <label for="category_id" class="form-label" >Category:</label>
@@ -17,32 +18,41 @@ const product = {
         </div>
         <div class="mb-3">   
             <label for="Description" class="form-label" >Description:</label>
-            <input type="text" class="form-control"  id="Description" v-model="product.Description" placeholder="description"></input>
+            <input type="text" class="form-control"  id="Description" v-model="product.Description" placeholder="Description"></input>
         </div>
         <div class="mb-3">   
             <label for="price_per_unit" class="form-label" >Price per unit:</label>
-            <input type="text" class="form-control"  id="price_per_unit" v-model="product.price_per_unit" placeholder="price per unit"></input>
+            <input type="text" class="form-control"  id="price_per_unit" v-model="product.price_per_unit" placeholder="Price per unit"></input>
+        </div>
+        <div class="mb-3">
+            <label for="quantity" class="form-label">Quantity:</label>
+                <select class="form-select" id="quantity" v-model="product.quantity">
+                    <option value="kg">kg</option>
+                    <option value="L">L</option>
+                    <option value="per unit">per unit</option>
+                </select>
         </div>
         <div class="mb-3">   
             <label for="stock" class="form-label" >Stock:</label>
-            <input type="text" class="form-control"  id="stock" v-model="product.Stock" placeholder="Product In Stock"></input>
+            <input type="text" class="form-control"  id="stock" v-model="product.Stock" placeholder="Product in stock"></input>
         </div>
         <div class="mb-3">   
-            <label for="image_url" class="form-label" >Image_url:</label>
-            <input type="url" class="form-control"  id="Image_url" v-model="product.image_url" placeholder="Image_url"></input>
+            <label for="image_url" class="form-label" >Image url:</label>
+            <input type="url" class="form-control"  id="Image_url" v-model="product.image_url" placeholder="Image url"></input>
         </div>
         <div class="mb-3">   
-            <label for="manufacture_date" class="form-label" >Manufacture_date:</label>
+            <label for="manufacture_date" class="form-label" >Manufacture Date:</label>
             <input type="date" class="form-control"  id="manufacture_date" v-model="product.manufacture_date" placeholder="Manufacture Date"></input>
         </div>
         <div class="mb-3">   
-            <label for="expairy_date" class="form-label" > Expairy_date:</label>
+            <label for="expairy_date" class="form-label" > Expairy Date:</label>
             <input type="date" class="form-control"  id="expairy_date" v-model="product.expairy_date" placeholder="Expiry Date"></input>
         </div>
-        <button type="button"  @click="create_update_Product()" class="btn btn-success">Save Product</button>
+        <button type="button"  @click="create_update_Product()" class="btn btn-success" style="background-color: rgb(76, 175, 80)">Save Product</button>
         
     </form>  
-    
+    </div>
+    <div v-else>{{ error_message }}</div>
     </div>`,
     data() {
         return {
@@ -64,7 +74,8 @@ const product = {
             success: true,
             error_message: "",
             message:"",
-            apiBaseUrl: "http://127.0.0.1:5000/api"
+            apiBaseUrl: "http://127.0.0.1:5000/api",
+            successfirst:true
         }
     },
     methods: {
@@ -77,9 +88,9 @@ const product = {
             });
             if (response.ok) {
                 const data = await response.json();
-                console.log("approvedata",data)
+                // console.log("approvedata",data)
                 this.categories = data.filter(category=> category.approve==true);
-                console.log(this.categories)
+                // console.log(this.categories)
             }
             else {
                 const errorData =await response.json()
@@ -101,9 +112,8 @@ const product = {
 
                 if (res.ok) {
                     const data = await res.json()
-                    console.log(data.Stock)
-
                     this.product = data
+                    this.message=data.message    
                 }
                 else {
                     const errorData = res.json()
@@ -162,8 +172,16 @@ const product = {
         
     },
     mounted() {
-        this.getProductDetails();
-        this.getCategories()
+        if(localStorage.getItem("Auth_token")){ 
+            this.getProductDetails();
+            this.getCategories()
+          }
+          else{
+            this.successfirst=false
+            this.error_message="You are not authorized to access this page. Please log in"
+           }
+      
+        
     }
 }
 

@@ -2,23 +2,24 @@
 const home = {
   template: `
   <div>
+  <div v-if="successfirst">
   <form>
       <div class="search-bar container">
           <div class="row">
               <div class="col ">
                   <select v-model="searchQuery.category_name" class="form-control">
-                      <option disabled value="">category name</option>
+                      <option disabled value="">Category name</option>
                       <option v-for="category in categories" :value="category.category_name" :key="category.category_name">{{ category.category_name }}</option>
                   </select>
               </div>
               <div class="col">
-                  <input type="number" class="form-control" placeholder="min" v-model="searchQuery.min_price"></input>
+                  <input type="number" class="form-control" placeholder="Min" v-model="searchQuery.min_price"></input>
               </div>
               <div class="col">
-                  <input type="number" class="form-control" placeholder="max" v-model="searchQuery.max_price"></input>
+                  <input type="number" class="form-control" placeholder="Max" v-model="searchQuery.max_price"></input>
               </div>
               <div class="col">
-                  <input type="text" class="form-control" placeholder="product name" v-model="searchQuery.search_word"></input>
+                  <input type="text" class="form-control" placeholder="Product name" v-model="searchQuery.search_word"></input>
               </div>
               <div class="col">
                   <button class="btn btn-success" @click.prevent="searchProducts">Search</button>
@@ -37,11 +38,10 @@ const home = {
             
               <h5 class="card-title">{{ product.product_name }}</h5>
               <p class="card-text">{{ product.Description }} </p>
-              <div> Price: RM{{ product.price_per_unit }}/kg </div>
-              <div style="color: red" v-if="product.Stock <=0">Out Of Stock</div>
-            
-            <br></br>
-              <button class="btn btn-success" @click.prevent="addtoCart(product)">Add to Cart</button>
+              <div> Price: RM{{ product.price_per_unit }} {{ product.quantity}} </div>
+
+              <div style="color: red; padding-top: 30px;" v-if="product.Stock <=0">Out Of Stock</div>
+              <div  style="padding-top: 30px;" v-else><button class="btn btn-success " @click.prevent="addtoCart(product)">Add to Cart</button></div>
           </div>
         </div>
       </div>
@@ -49,6 +49,10 @@ const home = {
     <div v-else>
     {{error_message}}
     </div>
+  </div>
+  </div>
+    <div v-else>
+    {{error_message}}
   </div>
       
   </div>`,
@@ -71,29 +75,23 @@ const home = {
       },
       success: true,
       error_message: "",
-       apiBaseUrl: "http://127.0.0.1:5000/api/"
+       apiBaseUrl: "http://127.0.0.1:5000/api/",
+       successfirst:true
       
     };
   },
-//   mixins: [
-//     tokenValidation
-// ],
-
-  
-  
   mounted() {
-    this.getCategories();
-    this.searchProducts();
-    // this.validateToken();
-  }
-  ,
+    if(localStorage.getItem("Auth_token")){ 
+      this.getCategories();
+      this.searchProducts();
+     }
+    else{
+      this.successfirst=false
+      this.error_message="You are not authorized to access this page. Please log in"
+     }
+  },
   methods: {
-     
-  
-
     async getCategories() {
-      // const token=this.validateToken()
-      // if (token){
       const response = await fetch(`${this.apiBaseUrl}/category`,{
         headers: {
           "Content-Type": "application/json",
@@ -145,20 +143,7 @@ const home = {
       }
     },
 
-    // async show_cart_item() {
-    //   const res = await fetch(`/api/cart/user/${this.$route.params.id}`)
-
-    //   if (res.ok) {
-    //     const data = await res.json()
-    //     this.products = data
-    //     console.log(data[0].price_per_unit)
-    //   }
-    //   else {
-    //     const errorData = await res.json()
-    //     this.success = false
-    //     this.error_message = errorData.error_message
-    //   }
-    // },
+    
     
     async addtoCart(product) {
       console.log(product.Stock)

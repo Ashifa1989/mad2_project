@@ -19,43 +19,43 @@
 
 <body>
   <div id="app" class="container-flex">
-    <nav class="navbar navbar-expand-lg navbar-light bg-success">
+    <nav class="navbar navbar-expand-lg navbar-light " style="background-color: rgb(76, 175, 80)">
+      
       <div class="logo-container leaf"></div>
       <div class="navbar-brand" href="#">
-        <h2 style="color: rgb(0, 3, 3); margin-left: 5px;">Leaf Grocery Shop</h2>
+        <h2 style="color: rgb(240, 243, 243); margin-left: 5px;">Leaf Grocery Shop</h2>
       </div>
       <div class="container-flex"  >
         <div class="navbar" id="navbarNavAltMarkup">
           <div class="navbar-nav" v-if="isLoggedIn">
             <div v-if="isAdmin">
-              <router-link to="/adminDashboard" class="nav-link" style="margin-left: 20px; float: right;">Admin Page</router-link>
-              <router-link to="/all_product" class="nav-link" style="margin-left: 20px; float: right;">Products Management</router-link>
-              <router-link to="/all_category" class="nav-link" style="margin-left: 20px; float: right;">Category Mgmt</router-link>
-              <router-link to="/logout" class="nav-link" style="margin-left: 20px; margin-right: 20px; float: right;">Logout</router-link>
+              <router-link to="/adminDashboard" class="nav-link" style="margin-left: 20px; float: right; color: white;">Admin Dashboard</router-link>
+              <router-link to="/all_product" class="nav-link" style="margin-left: 20px; float: right; color: white;">Products</router-link>
+              <router-link to="/all_category" class="nav-link" style="margin-left: 20px; float: right; color: white;">Category </router-link>
+              <router-link to="/cart" class="nav-link" style="margin-left: 20px; float: right; color: white;">Cart</router-link>
+              <router-link to="/logout" class="nav-link" style="margin-left: 20px; margin-right: 20px; float: right; color: white;">Logout</router-link>
             </div>
             <div v-else-if="isManager">
-              <router-link to="/managerDashboard" class="nav-link" style="margin-left: 20px; float: right;">Manager Page</router-link>
-              <router-link to="/all_product" class="nav-link" style="margin-left: 20px; float: right;">Products Management</router-link>
-              <router-link to="/all_category" class="nav-link" style="margin-left: 20px; float: right;">Category Mgmt</router-link>
-              <router-link to="/logout" class="nav-link" style="margin-left: 20px; margin-right: 20px; float: right;">Logout</router-link>
+              <router-link to="/managerDashboard" class="nav-link" style="margin-left: 20px; color: white; float: right;">Manager Dashboard</router-link>
+              <router-link to="/all_product" class="nav-link" style="margin-left: 20px; float: right; color: white;">Products </router-link>
+              <router-link to="/all_category" class="nav-link" style="margin-left: 20px; float: right; color: white;">Category </router-link>
+              <router-link to="/cart" class="nav-link" style="margin-left: 20px; float: right; color: white;">Cart</router-link>
+              <router-link to="/logout" class="nav-link" style="margin-left: 20px; margin-right: 20px; float: right; color: white;">Logout</router-link>
             </div>
             <div v-else>
               <!-- <li><a href="#" title="Header" data-toggle="popover" data-placement="bottom" data-content="Content">Bottom</a></li> -->
+              <router-link to="/logout" class="nav-link" style="margin-left: 20px; margin-right: 20px; float: right; color: white;">Logout</router-link>
+              <router-link to="/cart" class="nav-link" style="margin-left: 20px; float: right; color: white;">Cart</router-link>
+              <router-link to="/profile" class="nav-link " style="margin-left: 20px; float: right; color: white;">Profile</router-link>
+              <router-link to="/home" class="nav-link" style="margin-left: 20px; float: right; color: white;">Home</router-link>
               
-              <router-link to="/profile" class="nav-link " style="margin-left: 20px; float: right;">Profile</router-link>
-              <router-link to="/home" class="nav-link" style="margin-left: 20px; float: right;">home</router-link>
-              <router-link to="/logout" class="nav-link" style="margin-left: 20px; margin-right: 20px; float: right;">Logout</router-link>
-              <router-link to="/cart" class="nav-link" style="margin-left: 20px; float: right;">Cart</router-link>
             </div>
           </div>
 
           <div class="navbar-nav" v-if="!isLoggedIn">
-            <router-link to="/login" class="nav-link"
-              style="margin-left: 20px; margin-right: 20px; float: right;">Login</router-link>
-
-            
-            <router-link to="/signup" class="nav-link" style="margin-left: 20px; float: right;">Signup</router-link>
-            <router-link to="/signupManager" class="nav-link" style="margin-left: 20px; float: right;">signupManager</router-link>            
+            <router-link to="/login" class="nav-link" style="margin-left: 20px; margin-right: 20px; float: right; color: white;">Login</router-link>
+            <router-link to="/signup" class="nav-link" style="margin-left: 20px; float: right; color: white;">Signup</router-link>
+            <router-link to="/signupManager" class="nav-link" style="margin-left: 20px; float: right; color: white;">Signup Manager</router-link>            
           </div>
         </div>
       </div> 

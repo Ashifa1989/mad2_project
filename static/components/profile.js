@@ -1,7 +1,8 @@
-
+import userService from "./userService.js"
 const profile = {
     template: `
-    <div> 
+    <div>
+    <div v-if="success"> 
     <div class="container">
     <h1>Profile Page</h1>
     <div class="row">
@@ -30,7 +31,8 @@ const profile = {
       </div>
     </div>
   </div>
-        
+    </div>
+    <div v-else>{{ error_message }}</div>     
 
         <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
@@ -51,11 +53,10 @@ const profile = {
                     </div>
                     <div class="modal-footer">
                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                      <button type="button" @click="updateUser()" class="btn btn-success">
+                      <button type="button" @click="updateUser()" style="background-color: rgb(244, 67, 54);>
                       Save</button>
                     </div>
-                    <div v-if="success">{{ message }}</div>
-                    <div v-else>{{ error_message }}</div>
+                    <div v-if="!success">{{ error_message }}</div>
               </div>
           </div>
         </div>
@@ -74,60 +75,73 @@ const profile = {
     },
     methods: {
         async updateUser() {
-            const res = fetch(`${this.apiBaseUrl}/user`, {
+            const res =await fetch(`${this.apiBaseUrl}/user`, {
                 method: "put",
                 headers: {
                     "Content-Type": "application/json",
                     "Authentication-Token": localStorage.getItem("Auth_token")
                 },
                 body: JSON.stringify(this.user),
+                
 
             })
+            console.log("rse", res.status)
             if (res.ok) {
-                const data = await res.json()
-                this.user = data
-                this.getUser()
+                // const data=await res.json()
+                // this.EditUser = data
+                this.$router.go(0)
             }
             else {
                 const errorData = await res.json()
                 this.error_message = errorData.error_message
             }
         },
-        async getUser() {
-            const res = await fetch(`${this.apiBaseUrl}/user`, {
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authentication-Token": localStorage.getItem("Auth_token")
-                },
+        async getCustomer(){
+            const data=await userService.methods.getUser()
+            this.user=data
+            
+          },
+        // async getUser() {
+        //     const res = await fetch(`${this.apiBaseUrl}/user`, {
+        //         headers: {
+        //             "Content-Type": "application/json",
+        //             "Authentication-Token": localStorage.getItem("Auth_token")
+        //         },
 
-            })
-            console.log(res.status)
-            if (res.status == 401) {
-                const data = await res.json()
-                console.log("no user found", data);
-                this.success = false
-                this.error_message = "not an autheticated user"
-            }
-            else if (res.ok) {
-                const data = await res.json()
-                this.user = data
-                console.log(data)
-            }
-            else {
-                const errorData = await res.json();
-                console.log("no user found", errorData);
+        //     })
+        //     console.log(res.status)
+        //     if (res.status == 401) {
+        //         const data = await res.json()
+        //         console.log("no user found", data);
+        //         this.success = false
+        //         this.error_message = "not an autheticated user"
+        //     }
+        //     else if (res.ok) {
+        //         const data = await res.json()
+        //         this.user = data
+        //         console.log(data)
+        //     }
+        //     else {
+        //         const errorData = await res.json();
+        //         console.log("no user found", errorData);
 
-                this.success = false
-                this.error_message = errorData.error_message
-            }
-        },
+        //         this.success = false
+        //         this.error_message = errorData.error_message
+        //     }
+        // },
         async showEditUser() {
             this.EditUser = this.user
         }
     },
     async mounted() {
-        this.getUser()
-    }
+        if(localStorage.getItem("Auth_token")){ 
+         this.getCustomer()
+        }
+        else{
+            this.success=false
+            this.error_message="You are not authorized to access this page. Please log in"
+        }
+}
 }
 
 export default profile

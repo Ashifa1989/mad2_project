@@ -15,7 +15,7 @@ const login = {
       <label for="password" style="display: block; margin-bottom: 5px;">Password:</label>
       <input type="password" id="password" placeholder="password" v-model="formData.password" required style="padding: 8px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 10px;" />
 
-      <button type="submit" style="padding: 8px 15px; background-color: green; color: white; border: none; border-radius: 5px; cursor: pointer;">Login</button>
+      <button type="submit"  style="padding: 8px 15px; background-color: rgb(76, 175, 80); color: white; border: none; border-radius: 5px; cursor: pointer;">Login</button>
     </form>
 
     </div>

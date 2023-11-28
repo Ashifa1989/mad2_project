@@ -5,28 +5,17 @@ from security import user_datastore, sec
 from flask_security import Security, auth_required,LoginForm
 from flask_security.utils import hash_password
 from worker import  create_celery_app
-import csv
 from celery.result import AsyncResult
 import tasks
 from datetime import datetime as dt, timedelta, date
 from celery.schedules import crontab
-
-
 from flask_mail import Mail, Message
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-import smtplib
 from smtplib import SMTP
 from flask_caching import Cache
-
-
-
-
-
-
-
 
 app = Flask(__name__)
 
@@ -61,8 +50,7 @@ db.init_app(app)
 sec.init_app(app, user_datastore)
 mail = Mail(app)
 cache=Cache(app)
-# mail = Mail()
-# mail.init_app(app)
+
 
 celery_app = create_celery_app(app)
 # @app.before_first_request 
@@ -84,16 +72,10 @@ celery_app = create_celery_app(app)
 #         user_datastore.create_user( username="user1",password=hash_password("1234"),  email="user1@gmail.com",  roles=['Admin'] )
 #         db.session.commit()
 
-
-# @celery_app.on_after_configure.connect
-# def setup_periodic_tasks_for_dailyremainder(sender, **kwargs):
-#     sender.add_periodic_task(10.0, tasks.send_remainder_via_email.s(), name="remainder mail for user" )
-
-
 @celery_app.on_after_finalize.connect
 def setup_periodic_tasks_for_dailyremainder(sender, **kwargs):
     sender.add_periodic_task(
-        crontab(hour=20, minute=30),  # Schedule daily 
+        crontab(hour=23, minute=25),  # Schedule daily 
         tasks.send_remainder_via_email.s(),  # Task to execute
         name="remainder mail for user"  # Name of the task
     )
@@ -101,15 +83,10 @@ def setup_periodic_tasks_for_dailyremainder(sender, **kwargs):
 @celery_app.on_after_finalize.connect
 def setup_periodic_tasks_for_monthly_report(sender, **kwargs):
     sender.add_periodic_task(
-        crontab(hour=22, minute=25,day_of_month='1'),  # Schedule monthly 
+        crontab(hour=23, minute=25,day_of_month='24'),  # Schedule monthly 
         tasks.generate_send_monthly_report_via_email.s(),  # Task to execute
         name="users_monthly_report"  # Name of the task
     )
-
-
-            
-
-
 
 @app.route("/DownloadCSVFile")
 def DownloadCSVFile():
@@ -148,55 +125,6 @@ def notify_manager_csv_download(id):
     except Exception as e:
         return jsonify({"error": str(e)})
 
-# @app.route("/send_admin_approval_request")
-# def send_admin_approval_request():
-#     a=tasks.send_admin_approval_request.delay()
-#     return{
-#         "task_id": a.id,
-#         "task_state" :a.state,
-#         "task_result": a.result
-#         }
-# @app.route("/new_category_approval_request")
-# def new_category_approval_request():
-#     a=tasks.new_category_approval_request.delay()
-#     return{
-#         "task_id": a.id,
-#         "task_state" :a.state,
-#         "task_result": a.result
-#         }
-
-# @app.route("/update_category_approval_request/<int:id>", methods=["post"])
-# def update_category_approval_request(id):
-    
-#     #get data from api body and create category object
-#     # Store the category information in Redis
-
-#     redis_key = str(id)
-#     redis_client.set(redis_key, category)
-#     a=tasks.update_category_approval_request.delay()
-#     return{
-#         "task_id": a.id,
-#         "task_state" :a.state,
-#         "task_result": a.result,
-#         "redis_key": redis_key
-#         }
-
-# @app.route("/delete_category_approval_request")
-# def delete_category_approval_request():
-#     a=tasks.delete_category_approval_request.delay()
-#     return{
-#         "task_id": a.id,
-#         "task_state" :a.state,
-#         "task_result": a.result
-#         }
-
-
-
-
-                
-
-
-   
 
 @app.route("/")
 def home():

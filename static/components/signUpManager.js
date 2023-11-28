@@ -13,7 +13,7 @@ const signUpManager={
             <label for="password" style="display: block; margin-bottom: 5px;">Password:</label>
             <input type="password" id="password"  placeholder="password" v-model="user.password" required style="padding: 8px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 10px;" />
 
-            <button type="submit" style="padding: 8px 15px; background-color: green; color: white; border: none; border-radius: 5px; cursor: pointer;" >Create Account</button>
+            <button type="submit" style="padding: 8px 15px; background-color: rgb(76, 175, 80); color: white; border: none; border-radius: 5px; cursor: pointer;" >Create Account</button>
             </form>
             <div v-if="success">{{ message }}</div>
             <div v-else>{{ error_message }}</div>
@@ -52,15 +52,15 @@ data() {
             if (res.ok){
                 const data = await res.json()
                 this.message=data.message
-                // alert(this.message)
-                const adminApprovalres=await fetch("/send_admin_approval_request")
-                if (adminApprovalres.ok){
-                const adminApprovaldata= await adminApprovalres.json()
-                console.log("sending request for approval", adminApprovaldata)
-                }
-                this.user = data
-                this.success = true
-                console.log(data)
+                alert(this.message)
+                // const adminApprovalres=await fetch("/send_admin_approval_request")
+                // if (adminApprovalres.ok){
+                // const adminApprovaldata= await adminApprovalres.json()
+                // console.log("sending request for approval", adminApprovaldata)
+                // }
+                // this.user = data
+                // this.success = true
+                // console.log(data)
                 this.$router.push('/logout'); 
             }
             else {

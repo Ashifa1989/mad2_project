@@ -2,6 +2,7 @@ import { useGetAddresses } from './addressService.js'
 const address = {
     template: `
 <div> 
+<div v-if="success">
     <div class="row row-cols-1 row-cols-md-4 g-4">
         <div v-if="success" v-for="address in addresses">
             <div class="col">
@@ -21,6 +22,14 @@ const address = {
             </div>
         </div>
     </div>
+    <br>
+    <div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setAddress()">
+            Add Address
+        </button>
+    </div>
+    </div>
+    <div v-else> {{ error_message }}</div>
 
     <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -54,12 +63,7 @@ const address = {
             </div>
         </div>
     </div>
-    <br>
-    <div>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setAddress()">
-            Add Address
-        </button>
-    </div>
+    
 </div>`,
     data() {
         return {
@@ -150,7 +154,14 @@ const address = {
         this.getAddress = useGetAddresses
     },
     async mounted() {
-        this.addresses = await this.getAddress()
+        
+        if(localStorage.getItem("Auth_token")){ 
+            this.addresses = await this.getAddress()
+           }
+        else{
+            this.success=false
+            this.error_message="You are not authorized to access this page. Please log in"
+           }
     }
 }
 

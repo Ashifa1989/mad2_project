@@ -13,6 +13,7 @@ from flask_mail import Mail, Message
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta, date
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+import tasks
 
 
 from celery.result import AsyncResult
@@ -38,38 +39,6 @@ output_user_field = {
     
 }
 
-
-class send_admin_approval_request(Resource):
-    def get(self):
-        a=send_admin_approval_request.delay()
-        return{
-            "task_id": a.id,
-            "task_state" :a.state,
-            "task_result": a.result
-            }
-    
-# Route to trigger the generation and sending of the monthly report
-# @app.route('/send_monthly_report', methods=['POST'])
-# class send_monthly_report(Resource):
-#     def post(self):
-#         report_file = generate_monthly_report()
-#         result = send_email_with_attachment(report_file)
-#         return result, 200
-#     
-
-# @app.route('/send_inactive_user_email', methods=['POST'])
-# class send_inactive_email():
-#     def post(self):
-    
-#         # Queue the Celery task
-#         a=send_inactive_user_email.delay(args=[user_id])
-#         return{
-#                     "task_id": a.id,
-#                     "task_state" :a.state,
-#                     "task_result": a.result
-#                     }
-
-
 output_Category_field = {
     "category_id" : fields.Integer,
     "category_name" : fields.String,
@@ -88,22 +57,20 @@ output_product_field = {
     "Stock" : fields.Integer,
     "image_url" : fields.String,
     "manufacture_date" : fields.String,
-     "expairy_date" : fields.String,
-     "timestamp" : fields.DateTime,
-      "quantity" : fields.Integer
+    "expairy_date" : fields.String,
+    "timestamp" : fields.DateTime,
+    "quantity" : fields.String   #quantity unit
 }
 
 output_cart_field = {
     "product_id" : fields.Integer,
     "user_id" : fields.Integer,
     "cart_id" : fields.Integer,
-    "product_name" : fields.String,
-    "Description" : fields.String,
     "price_per_unit" : fields.Float,
-    "image_url" : fields.String,
-    "quantity" : fields.Integer,
+    "quantity" : fields.Integer, #number of item
     "total_price":fields.Float, 
-     "Stock" : fields.Integer, 
+    "Stock" : fields.Integer, 
+    "product":fields.Nested({"product_name" : fields.String, "image_url" : fields.String,})
 }
 
 output_order_field={
@@ -235,7 +202,8 @@ class SchemaValidationError(HTTPException):
         data = {"error_message": error_message}
         self.response = make_response(json.dumps(data), status_code)
 
-class Users(Resource):    
+class Users(Resource):
+    @auth_required("token")    
     @marshal_with(output_user_field)
     def get(self):
         all_user=user_model.query.all()
@@ -292,8 +260,8 @@ class UserApi(Resource):
         # db.session.commit()
 
         return ("Successfully created new user", 200)
-    
-    # @marshal_with(output_user_field)
+    @auth_required("token")
+    @marshal_with(output_user_field)
     def put(self): #update user information
         id=current_user.id
         # if id is None:
@@ -327,7 +295,7 @@ class UserApi(Resource):
         db.session.commit()
         return ("successfully deleted the user", 200)
     
-class manager_api(Resource):
+class ManagerApi(Resource):
     def post(self):
         args = user_register_parser.parse_args()
         # print(args)
@@ -352,21 +320,25 @@ class manager_api(Resource):
         # db.session.add(role_manager)
         # db.session.add(role_customer)
         # db.session.commit()
-        
-    
+        send_admin_approval_request()
         return {"message" :"Successfully created the acoount.please wait for the Admin approval"},200
     
     
               
         
 
-
+import config
 class Categories(Resource):
     @auth_required("token")
     @marshal_with(output_Category_field)
     def get(self):
-        # all_category= Category.query.all()
+        config.app.logger.info("inside get all category using info")
+        start=perf_counter_ns()
         all_category=get_all_category()
+        end=perf_counter_ns()
+        print("timetaken", end-start)
+        config.app.logger.debug("inside get all category using degub")
+        
         return all_category
     
     # @marshal_with(output_Category_field)
@@ -401,16 +373,6 @@ class Categories(Resource):
                 return {"message":"Category creation initiated! Please await admin approval."}, 200
             else:
                 return("you are not authorized to create new category")
-            
-
-
-
-            
-            
-
-
-        
-
     
 class CategoryApi(Resource):
     @auth_required("token")
@@ -423,17 +385,15 @@ class CategoryApi(Resource):
             raise SchemaValidationError(status_code=204, error_message="category not found ")
         else:
              return category
+        
     @auth_required("token")
     @roles_accepted("Admin","Manager")
-    
-    # @marshal_with(output_Category_field)
     def put(self, id):
-
-        
         category =  Category.query.filter_by(category_id=id).first()
         args=update_category_parser.parse_args()
         category_name = args.get("category_name", None)
         image = args.get("imagelink", None)
+        # print(args)
         # category.category_name = category_name
         # category.imagelink = image
         user_id=current_user.id
@@ -445,6 +405,7 @@ class CategoryApi(Resource):
                     category.imagelink = image
                     category.updateRequest=False
                     db.session.commit()
+                    print(category)
                     # return category
                     return {"message":"Category updated scuuessfully"}, 200
                 elif role=="Manager":
@@ -468,7 +429,7 @@ class CategoryApi(Resource):
         else:
             raise SchemaValidationError(status_code=204, error_message="category not found")
         
-    # @marshal_with(output_Category_field)    
+        
     @auth_required("token")
     @roles_accepted("Admin","Manager")
     def delete(self, id):
@@ -499,12 +460,13 @@ class products(Resource):
     @auth_required("token")
     @marshal_with(output_product_field)
     def get(self):
-        print("inside get all peoduct")
+        config.app.logger.info("inside get all product using info")
         start=perf_counter_ns()
         # product = Product.query.order_by(Product.timestamp.desc()).all()  # Sort by timestamp
         products=get_all_product()
         end=perf_counter_ns()
-        print("timetake", end-start)
+        print("timetaken", end-start)
+        config.app.logger.debug("inside get all product using info")
         return products
     
     
@@ -535,18 +497,15 @@ class products(Resource):
         db.session.add(new_product)
         db.session.commit()
         
-        return ("Successfully created the product", 200)
+        return {"message":"Successfully created the product"}, 200
     
 
 
-class Product_Api(Resource):
+class ProductApi(Resource):
     @auth_required("token")
     @marshal_with(output_product_field)
     def get(self,id): 
-        
         product = Product.query.filter_by(product_id=id).first()
-            
-        
         # print(product)
         if product is None:
              raise SchemaValidationError(status_code=404, error_message="sorry!! No product  found")
@@ -581,24 +540,24 @@ class Product_Api(Resource):
         update_product.manufacture_date = manufacture_date
         update_product.expairy_date = expairy_date
         db.session.commit()
-        return ("Successfully update_product", 200)
+        return {"message":"Successfully updated product"},200
     
 
     @auth_required("token")
     @roles_accepted("Admin","Manager")
-    @marshal_with(output_product_field)
+    # @marshal_with(output_product_field)
     def delete(self, id):
         product= Product.query.filter_by(product_id=id).first()
         if product is None:
             raise SchemaValidationError(status_code=404, error_message="product not found")
-        db.session.delete(product)
-        db.session.commit()
-        return ("Successfully deleted the product", 200)
+        else:
+            db.session.delete(product)
+            db.session.commit()
+            return {"message":"Successfully deleted the product"}, 200
 
 class search_product(Resource):
     @marshal_with(output_product_field)
     def post(self):
-        
         args=search_parser.parse_args()
         # print(args)
         search_word=args.get("search_word", None)
@@ -613,9 +572,13 @@ class search_product(Resource):
 
         # Add filters based on query parameters
         if category_name:
+            config.app.logger.info("inside get all product by category using info")
+            start=perf_counter_ns()
             query=get_product_by_category(category_name)
             # query = query.join(Category).filter(Category.category_name==category_name)
-            
+            end=perf_counter_ns()
+            print("timetaken", end-start)
+            config.app.logger.debug("inside get all product by category using debug")
             
         if min_price:
             query = query.filter(Product.price_per_unit >= min_price)
@@ -635,6 +598,7 @@ class search_product(Resource):
         return products
         
 class search_category(Resource):
+    @auth_required("token")
     @marshal_with(output_Category_field)
     def post(self):
         
@@ -647,8 +611,8 @@ class search_category(Resource):
             category= Category.query.filter(Category.category_name.like(search)).all()
             return category
         
-class cart_Api(Resource):
-
+class CartApi(Resource):
+    @auth_required("token")
     @marshal_with(output_cart_field)
     def get(self):
         user_id=current_user.id
@@ -675,9 +639,8 @@ class cart_Api(Resource):
                 return {"message":"Your cart is empty!! Continue shopping to browse and search for items."}
         else:
             return {"message":"Your cart is empty!! Continue shopping to browse and search for items."}, 204
-    
-    @marshal_with(output_cart_field)
     @auth_required("token")
+    @marshal_with(output_cart_field)
     def post(self):
         user_id=current_user.id
         #print(user_id)
@@ -702,8 +665,9 @@ class cart_Api(Resource):
         db.session.add(cart)
         db.session.commit()
         return cart
-    @marshal_with(output_cart_field)
+    
     @auth_required("token")
+    @marshal_with(output_cart_field)
     def put(self):
         user_id=current_user.id
         #print(user_id)
@@ -720,7 +684,8 @@ class cart_Api(Resource):
         cart.total_price = cart.quantity * cart.price_per_unit
         db.session.commit()
         return cart
-    
+        # return {"message": "succesfully updated the cart"}
+    @auth_required("token")
     def delete(self, cart_id) :
         # print(cart_id)
         cart=Cart.query.filter_by(cart_id=cart_id).first()
@@ -732,8 +697,8 @@ class cart_Api(Resource):
         else:
             raise SchemaValidationError(status_code=404, error_message="product not found in cart")
         
-class Order_api(Resource):
-
+class OrderApi(Resource):
+    @auth_required("token")
     @marshal_with(output_order_field)
     def get (self,order_id):
         user_id=current_user.id
@@ -741,20 +706,9 @@ class Order_api(Resource):
 
         if orderObject is None:
              raise SchemaValidationError(status_code=404, error_message="sorry!! No order found")
-        # items=[]
-        # for item in orderObject:
-        #     items.append ({
-        #         "product_name": item.product.product_name,
-        #         "quantity":item.quantity,
-        #         "price_per_unit":item.price_per_unit,
-        #         "total_price":item.total_price,
-        #         "order_id":item.order_id
-        #     })
-
-        # return items
 
         return orderObject
-    
+    @auth_required("token")
     @marshal_with(output_order_field)
     def post(self):
         args= order_parser.parse_args()
@@ -792,16 +746,20 @@ class Order_api(Resource):
             db.session.delete(cart_item) 
          
         db.session.commit()
+        print(order_item)
         return order_item
-class allOrder(Resource):
+        # return {"message":"your purchase is successfull. thank you for shopping with us"}
+class AllOrder(Resource):
+    @auth_required("token")
     @marshal_with(output_order_field)
     def get(self):
         id=current_user.id
-        print(id)
+        # print(id)
         orders=Order.query.filter_by(user_id=id).all()
-        print(orders)
+        # print(orders)
         return orders 
-class address_api(Resource):
+class AddressApi(Resource):
+    @auth_required("token")
     @marshal_with(output_address_field)
     def get(self):
         user_id=current_user.id
@@ -820,7 +778,7 @@ class address_api(Resource):
         db.session.add(address)
         db.session.commit()
         return {"message":"succefully added the address"}, 200
-    
+    @auth_required("token")
     def put(self,id):
         user_id = current_user.id
         args= address_parser.parse_args()
@@ -842,7 +800,7 @@ class address_api(Resource):
         
         db.session.commit()
         return {"message": "successfully updated address details"}
-
+    @auth_required('token')
     def delete(self,id):
     
         address=Address.query.filter_by(address_id=id).first()
@@ -855,12 +813,14 @@ class address_api(Resource):
             raise SchemaValidationError(status_code="404", error_message="no address details found")
 
 
-class payment_api(Resource):
+class PaymentApi(Resource):
+    @auth_required("token")
     @marshal_with(output_payment_field)
     def get(self):
         user_id=current_user.id
         payment=Payment.query.filter_by(user_id=user_id).all()
         return payment
+    @auth_required("token")
     def post(self):
         args=payment_parser.parse_args()
         user_id=current_user.id
@@ -872,6 +832,7 @@ class payment_api(Resource):
         db.session.add(payment)
         db.session.commit()
         return {"message": "successfully added the payment details"}
+    @auth_required("token")
     def put(self,id):
         args=payment_parser.parse_args()
         user_id=current_user.id
@@ -885,7 +846,7 @@ class payment_api(Resource):
         update_payment.expiry_date=expiry_date
         db.session.commit()
         return {"message": "succesfully update payment details"}
-    
+    @auth_required("token")
     def delete(self,id):
         payment=Payment.query.filter_by(payment_id=id).first()
         # print(payment.payment_id)
@@ -898,7 +859,9 @@ class payment_api(Resource):
         else:
             raise SchemaValidationError(status_code="404", error_message="no payment details found")
 
-class Admin_approval_signUp_request(Resource):
+class AdminApprovalSignUpRequest(Resource):
+    @auth_required("token")
+    @roles_required("Admin")
     @marshal_with(output_user_field)
     def get(self):
         inactive_manager= user_model.query.filter_by(active=False).all()
@@ -907,14 +870,17 @@ class Admin_approval_signUp_request(Resource):
             return {"status":404, "error_message":"no new Manager SignUp "}
         else:
             return inactive_manager
-
+    @auth_required("token")
+    @roles_required("Admin")
     def put(self, id):
         manager=user_model.query.filter_by(id=id).first()
         manager.active=True
         db.session.commit()
+        tasks.notify_manager_for_signup_Approval(id)
         return {"message" : "manager role approved from admin"}, 200
     
-class Admin_reject_signUp_request(Resource):
+class AdminRejectSignUpRequest(Resource):
+    @auth_required("token")
     @roles_required("Admin")
     def put(self, id):
         manager=user_model.query.filter_by(id=id).first()
@@ -928,23 +894,27 @@ class Admin_reject_signUp_request(Resource):
             if role is not None:
                 db.session.delete(role)  
                 db.session.commit()
+                tasks.notify_manager_for_signup_reject(id)
                 return {"message" : "manager role rejected from admin"}, 200
         
-class Admin_Approval_category_request(Resource):
+class AdminApprovalCategoryRequest(Resource):
+    @auth_required("token")
+    @roles_required("Admin")
     @marshal_with(output_Category_field)
     def get(self):
         Categories=Category.query.filter_by(approve=False , updateRequest=False, deleteRequest=False).all()
         print(len(Categories))
         if len( Categories)==0:
-             return {"status":204, "error_message":"no new category approval "}
+             return {"status":204, "error_message":"No new category approval Request "}
         else:
             return Categories
-    @roles_required("Admin")
-    def put(self, id):
-        category= Category.query.filter_by(category_id=id).first()
-        category.approve=True
-        db.session.commit()
-        return {"message": "Admin approved the category update. Please proceed with the changes."},200
+    # # @roles_required("Admin")
+    # def put(self, id):
+    #     category= Category.query.filter_by(category_id=id).first()
+    #     category.approve=True
+    #     db.session.commit()
+    #     return {"message": "Admin approved the category update. Please proceed with the changes."},200
+    @auth_required("token")
     @roles_required("Admin")
     def delete(self,id):
         category=Category.query.filter_by(category_id=id).first()
@@ -953,13 +923,14 @@ class Admin_Approval_category_request(Resource):
         db.session.commit()
         return {"message": "Admin rejected new category request . Please proceed with the changes."},200
        
-class categoryUpdateDeleteRequest(Resource):
+class ApprovreCategoryUpdateDeleteRequest(Resource):
+    @auth_required("token")
     @roles_required("Admin")
     @marshal_with(output_Category_field)
-
     def get(self):
         category= Category.query.filter_by(updateRequest=True).all()
         return category
+    @auth_required("token")
     @roles_required("Admin")
     def put(self, id):
         #retrive the category from redis
@@ -988,6 +959,7 @@ class categoryUpdateDeleteRequest(Resource):
         else:
             return {"errormessage": f"Category with ID {id} not found in the database"}, 404
             
+    @auth_required("token")
     @roles_required("Admin")
     def delete(self,id):
         category=Category.query.filter_by(category_id=id).first()
@@ -995,12 +967,14 @@ class categoryUpdateDeleteRequest(Resource):
         db.session.commit()
         return {"message": "Admin approved the category delete. Please proceed with the changes."},200
 
-class rejectCategoryUpdateDeleteRequest(Resource):
+class RejectCategoryUpdateDeleteRequest(Resource):
+    @auth_required("token")
     @roles_required("Admin")
     @marshal_with(output_Category_field)
     def get(self):
         category= Category.query.filter_by(deleteRequest=True).all()
         return category
+    @auth_required("token")
     @roles_required("Admin")
     def put(self,id):
         category= Category.query.filter_by(category_id=id).first()
@@ -1008,6 +982,10 @@ class rejectCategoryUpdateDeleteRequest(Resource):
             category.updateRequest=False
             db.session.commit()
             return {"message": "Admin rejected the category update. Please proceed with the changes."},200
+    @auth_required("token")
+    @roles_required("Admin")
+    def delete(self,id):
+        category= Category.query.filter_by(category_id=id).first()
         if category.deleteRequest==True:
             category.deleteRequest=False
             db.session.commit()
@@ -1022,18 +1000,17 @@ api.add_resource(Categories, "/category")
 api.add_resource(CategoryApi, "/category/<id>")
 api.add_resource(products, "/product")
 api.add_resource(search_category, "/category/search")
-api.add_resource(Product_Api,  "/product/<int:id>", "/product/category/<string:category_name>")
+api.add_resource(ProductApi,  "/product/<int:id>", "/product/category/<string:category_name>")
 api.add_resource(search_product, "/product/search")
-api.add_resource(cart_Api,  "/cart/<int:cart_id>", "/cart")
-api.add_resource(Order_api, "/order","/order/<int:order_id>")
-api.add_resource(address_api, "/address", "/address/<int:id>")
-api.add_resource(payment_api, "/payment", "/payment/<int:id>")
-api.add_resource(manager_api,  "/manager/register")
-api.add_resource(Admin_approval_signUp_request, "/Admin_approval", "/Admin_approval/<int:id>")
-api.add_resource(Admin_reject_signUp_request,  "/Admin_reject/<int:id>")
-api.add_resource(Admin_Approval_category_request,  "/Admin_Approval_category_request", "/Admin_Approval_category_request/<int:id>")
-api.add_resource(categoryUpdateDeleteRequest, "/categoryUpdateRequest","/categoryUpdateRequest/<int:id>", "/categoryDeleteRequest/<int:id>")
-api.add_resource( rejectCategoryUpdateDeleteRequest, "/categoryDeleteRequest", "/rejectCategoryUpdateRequest/<int:id>",  "/rejectCategoryDeleteRequest/<int:id>")
-api.add_resource(send_admin_approval_request, "/send_admin_approval_request")
-# api.add_resource(send_monthly_report, '/send_monthly_report')
-api.add_resource(allOrder,"/allOrder")
+api.add_resource(CartApi,  "/cart/<int:cart_id>", "/cart")
+api.add_resource(OrderApi, "/order","/order/<int:order_id>")
+api.add_resource(AddressApi, "/address", "/address/<int:id>")
+api.add_resource(PaymentApi, "/payment", "/payment/<int:id>")
+api.add_resource(ManagerApi,  "/manager/register")
+api.add_resource(AdminApprovalSignUpRequest, "/Admin_approval", "/Admin_approval/<int:id>")
+api.add_resource(AdminRejectSignUpRequest,  "/Admin_reject/<int:id>")
+api.add_resource(AdminApprovalCategoryRequest,  "/Admin_Approval_category_request", "/Admin_Approval_category_request/<int:id>")
+api.add_resource(ApprovreCategoryUpdateDeleteRequest, "/categoryUpdateRequest","/categoryUpdateRequest/<int:id>", "/categoryDeleteRequest/<int:id>")
+api.add_resource( RejectCategoryUpdateDeleteRequest, "/categoryDeleteRequest", "/rejectCategoryUpdateRequest/<int:id>",  "/rejectCategoryDeleteRequest/<int:id>")
+# api.add_resource(send_admin_approval_request, "/send_admin_approval_request")
+api.add_resource(AllOrder,"/allOrder")

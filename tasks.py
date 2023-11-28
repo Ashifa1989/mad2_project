@@ -22,6 +22,9 @@ from flask import jsonify
 from datetime import datetime as dt, timedelta, date
 from config import *
 from flask_security import current_user
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -133,12 +136,6 @@ def generate_productDetails_csv():
     return True
 
 
-
-
-
-
-
-
 def send_email_with_attachment(to_address, subject, message, content="html", attachment_file=None, html_content=None):
         msg = MIMEMultipart()
         msg['From'] = "user1@gmail.com"
@@ -163,9 +160,6 @@ def send_email_with_attachment(to_address, subject, message, content="html", att
         s.quit()
         return True
     
-import logging
-
-logger = logging.getLogger(__name__)
 
     
 
@@ -228,10 +222,6 @@ def generate_send_monthly_report_via_email():
         # Log any exceptions that occurred
         logger.exception("Error occurred while sending monthly report: %s", e)
 
-
-
-
-
 @shared_task
 def send_remainder_via_email():
     current_time = datetime.utcnow()
@@ -263,13 +253,7 @@ def send_email(to_address, subject, message,content="text", attachment_file=None
         msg.attach(MIMEText(message, "html"))
     else:
         msg.attach(MIMEText(message, "plain"))
-    # if attachment_file:
-    #     with open(file_path, 'rb') as attachment:
-    #         part = MIMEBase('application', 'octet-stream')
-    #         part.set_payload(attachment.read())
-    #         encoders.encode_base64(part)
-    #         part.add_header('Content-Disposition', f'attachment; filename= {file_path}')
-    #         msg.attach(part)
+    
     s=smtplib.SMTP(host=SMPTP_SERVER_HOST, port=SMPTP_SERVER_PORT)
     s.login(SENDER_ADDRESS, SENDER_PASSWORD)
     s.send_message(msg)
@@ -283,5 +267,25 @@ def notify_manager_for_Download_csv_via_email(id):
     send_email(to_address=manager.email,
                         subject="Export CSV",
                         message="Dear {}, I wanted to inform you that  downloading the product information CSV file has been successfully executed.".format(manager.username),
+                        ) 
+    return jsonify({"status": "success", "message": "Email should arraive in your inbox shortly"})
+
+@shared_task
+def notify_manager_for_signup_Approval(id):
+    
+    manager = User.query.filter(User.id == id).first()
+    send_email(to_address=manager.email,
+                        subject="Approve signup request",
+                        message="Dear {}, I wanted to inform you that  your sign up request is approved by Admin.".format(manager.username),
+                        ) 
+    return jsonify({"status": "success", "message": "Email should arraive in your inbox shortly"})
+
+@shared_task
+def notify_manager_for_signup_reject(id):
+    
+    manager = User.query.filter(User.id == id).first()
+    send_email(to_address=manager.email,
+                        subject="Reject signup request",
+                        message="Dear {}, I wanted to inform you that  your sign up request is rejected by Admin.".format(manager.username),
                         ) 
     return jsonify({"status": "success", "message": "Email should arraive in your inbox shortly"})

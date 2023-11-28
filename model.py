@@ -1,11 +1,10 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_security import UserMixin , RoleMixin 
-from flask_security.utils import hash_password
 import uuid
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField
 from wtforms.validators import DataRequired, Email, Length
-from datetime import date ,  datetime, timedelta
+from datetime import datetime
 
 db=SQLAlchemy()
 
@@ -71,7 +70,7 @@ class Product(db.Model):
     Description = db.Column(db.Text)
     Catagory_id = db.Column(db.Integer, db.ForeignKey('category.category_id'))
     price_per_unit =  db.Column(db.Float)
-    quantity = db.Column(db.Integer)
+    quantity = db.Column(db.String)
     Stock = db.Column(db.Integer)
     image_url = db.Column(db.Text, nullable=True)
     manufacture_date = db.Column(db.String)

@@ -3,8 +3,10 @@ import { useGetPayments } from './paymentService.js'
 
 const cart = {
   template: `
+  <div>
+  <div v-if="successfirst">
   <div class="container">
-    <main>
+    
         <div class="py-5 text-center">
             <h3>Below are items in your cart. Checkout?</h3>
         </div>
@@ -30,13 +32,13 @@ const cart = {
                                         {{ product.quantity }}
                                       <button @click="incrementQuantity(product)">+</button>
                                     </div>
-                                    <div><small class="text-body-secondary">Price per unit: {{product.price_per_unit}}</small></div>
+                                    <div><small class="text-body-secondary">Price per unit:RM {{product.price_per_unit}}</small></div>
                                     
                                 
                                 
                                 </div>
                                 <div>
-                                <span class="text-body-secondary "> Rs. {{product.total_price}}</span>
+                                <span class="text-body-secondary "> RM {{product.total_price}}</span>
                                 
                                 <div><a @click="deleteCartItem(product.cart_id)" class="delete-icon text-success">Remove</a></div>
                                
@@ -52,7 +54,7 @@ const cart = {
                       <div v-else><strong>{{ error_message }}</strong></div>
                     </div>
                     <li class="list-group-item d-flex justify-content-between">
-                        <strong><span>Total price. Rs. {{cart_total_amount}} </span></strong>
+                        <strong><span>Total price: RM {{cart_total_amount}} </span></strong>
                     </li>
                 </ul>
             </div>
@@ -115,12 +117,14 @@ const cart = {
                 <div> <span style="color: black; margin-up:30px"> Do you want to add new Payment Details?  <a href="/#/payment" class="text-success" > click here </a></span> </div>
 
                 <hr class="my-4">
-                <button class="w-30 btn btn-secondary btn-lg col-md-3" type="button" @click.prevent="countinue_shopping">Continue shopping</button>
-                <button class="w-70 btn btn-success btn-lg col-md-6" type="button" @click.prevent="checkout">Checkout</button>
+                <button class="w-30 btn btn-dark btn-lg col-md-3" type="button" @click.prevent="countinue_shopping">Continue shopping</button>
+                <button class="btn btn-success btn-lg col-md-6" type="button" style="background-color: rgb(76, 175, 80)" @click.prevent="checkout">Checkout</button>
 
             </div>
         </div>
-    </main>
+</div>
+</div>
+    <div v-else> {{ error_message }}</div>    
 </div>
 `,
   data() {
@@ -140,7 +144,8 @@ const cart = {
         quantity: 1,
 
       },
-      apiBaseUrl: "http://127.0.0.1:5000/api/"
+      apiBaseUrl: "http://127.0.0.1:5000/api/",
+      successfirst:true
     }
   },
 
@@ -256,21 +261,17 @@ const cart = {
 
           if (updateCartResponse.ok) {
             console.log("successfully update the product quantity")
+            // this.getCart();
             product.quantity++
-            console.log(product.total_price)
             product.total_price=product.quantity*product.price_per_unit
-            console.log(product.total_price)
-            // this.getCart()
+            this.cart_total_amount = this.products.reduce((accum, item) => accum + item.total_price, 0)
+            
           }
            else {
             this.success = false
             this.error_message="something went wrong !! please try again";
           }
         },
-        
-       
-    
-
     async decrementQuantity(product) {
         if (product.quantity > 1) {
           // Update the cart with the new quantity
@@ -284,11 +285,10 @@ const cart = {
           });
 
           if (updateCartResponse.ok) {
-            //refresh cart after decrement via API call
-            //this.getCart()
             //refresh cart using variable
             product.quantity --;
             product.total_price=product.quantity*product.price_per_unit
+            this.cart_total_amount = this.products.reduce((accum, item) => accum + item.total_price, 0)
           }
           else {
             this.success = false
@@ -308,12 +308,18 @@ const cart = {
     console.log('i am here')
   },
   async mounted() {
-    this.getCart();
-    this.addresses = await this.getAddress()
+    if(localStorage.getItem("Auth_token")){ 
+      this.getCart();
+      this.addresses = await this.getAddress()
 
-    this.payments = await this.getpayments()
-    this.address.address_id = 0;
-    this.payment.payment_id = 0;
+      this.payments = await this.getpayments()
+      this.address.address_id = 0;
+      this.payment.payment_id = 0;
+    }
+    else{
+      this.successfirst=false
+      this.error_message="You are not authorized to access this page. Please log in"
+     }  
   }
 }
 

@@ -1,6 +1,7 @@
 const order = {
     template: `
 <div>
+<div v-if="successfirst">
 <h2>Order Summary</h2>
 <div> Order Id : {{order.order_id}}</div>
 <div>Address Details : {{ order.address.street }} {{ order.address.city}} {{order.address.state}} {{order.address.postal_code}}</div>
@@ -14,8 +15,9 @@ const order = {
   <div> Total Price :{{ item.total_price}} </div>
 </div>
 
-
 </div>
+</div>
+<div v-else> {{ error_message }}</div>
 
 </div>`,
     data() {
@@ -27,7 +29,8 @@ const order = {
             message: "",
             success: true,
             error_message: "",
-            apiBaseUrl: "http://127.0.0.1:5000/api/"
+            apiBaseUrl: "http://127.0.0.1:5000/api/",
+            successfirst:true
         }
     },
 
@@ -54,8 +57,16 @@ const order = {
         
     },
     mounted() {
-        this.message = "your order is successful.thank you for shopping with us "
+        if(localStorage.getItem("Auth_token")){ 
+            this.message = "your order is successful.thank you for shopping with us "
         this.OrderLIst(this.$route.params.id)
+          }
+        else{
+            this.successfirst=false
+            this.error_message="You are not authorized to access this page. Please log in"
+        }
+        
+        
         
     },
 }

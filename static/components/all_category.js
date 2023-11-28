@@ -2,13 +2,14 @@
 
 const all_category = {
   template: `
-    <div >
+    <div>
+    <div v-if="successfirst">
     <div v-if="categories.length>0">
       <table class="table">
         <thead>
           <tr>
-            <th scope="col">category Name</th>
-            <th scope="col">ImageLInk</th>
+            <th scope="col">Category Name</th>
+            <th scope="col">Image Link</th>
             <th scope="col">Action</th>
             
           </tr>
@@ -18,11 +19,11 @@ const all_category = {
               <td>{{ category.category_name}}</td>
               <td>{{ category.imagelink }}</td>
               <td>            
-              <button type="button"  class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setSelectedCategory(category)" >
+              <button type="button" class="btn btn-success" style="background-color: rgb(76, 175, 80)" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setSelectedCategory(category)" >
                 Update
               </button>
               </td>              
-              <td><button class="btn btn-success"  @click.prevent="deleteCategory(category.category_id)">Delete</button></td>
+              <td><button  class="btn btn-danger" style="background-color: rgb(244, 67, 54);"  @click.prevent="deleteCategory(category.category_id)">Delete</button></td>
               
             </tr>
             <tr v-else>
@@ -33,7 +34,13 @@ const all_category = {
         </table>
         </div>
         <div v-else><strong>"Currently, there are no categories available. You can get started by creating a new category."</strong></div> 
-        
+        <button type="button"  class="btn btn-success" style="background-color: rgb(76, 175, 80)" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setcategory()" >
+              Create Category
+        </button> 
+      </div>
+      <div v-else> {{ error_message }}</div> 
+
+
         <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
                   <div class="modal-content">
@@ -47,13 +54,13 @@ const all_category = {
                         <input type="text" class="form-control" v-model="cat.category_name">
                       </div>
                       <div>
-                        <label class="form-label">ImageLInk:</label>
+                        <label class="form-label">Image Link:</label>
                         <input type="text" class="form-control" v-model="cat.imagelink">
                       </div>
                     </div>
                     <div class="modal-footer">
-                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                      <button type="button" @click="Create_update_category()" class="btn btn-success">Save</button>
+                      <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+                      <button type="button"class="btn btn-success" style="background-color: rgb(76, 175, 80)" @click="Create_update_category()" >Save</button>
                     </div>
                     <div v-if="success">{{ message }}</div>
                     <div v-else>{{ error_message }}</div>
@@ -61,10 +68,8 @@ const all_category = {
           </div>
         </div>
                         
-      <button type="button"  class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setcategory()" >
-              Create Category
-      </button>       
-        
+            
+       
     </div>
     `,
   data() {
@@ -83,6 +88,7 @@ const all_category = {
       success: true,
       error_message: "",
       message:"",
+      successfirst:true
       
     }
   },
@@ -128,49 +134,15 @@ const all_category = {
         console.log(data)
         this.message=data.message
         alert(this.message)
-        this.$router.go(0)
-        // if (data.deleteRequest == false){
-        //   const response = await fetch("http://127.0.0.1:5000/api/category");
-        //   if (response.ok) {
-        //     const data = await response.json();
-        //     this.categories = data.filter(category=>category.approve==true);
-            
-        //   }
-        //   else {
-        //     const errorData = await response.json()
-        //     this.success = false
-        //     this.error_message = errorData.error_message
-        //   }
-        // }
-        // else {
-        //   alert("please wait for admin approval")
-        //   this.success=true
-        //   this.message=data.message
-        //   const productApprovalres=await fetch("/delete_category_approval_request")
-        //       if (productApprovalres.ok){
-        //       const productApprovaldata= await productApprovalres.json()
-        //       console.log("sending request for approval", productApprovaldata)
-        //       }
-        //   const response = await fetch("http://127.0.0.1:5000/api/category");
-        //   if (response.ok) {
-        //     const data = await response.json();
-        //     this.categories = data.filter(category=>category.approve==true);
-        //     this.message=""
-        //   } 
-        //   else {
-        //     const errorData = await response.json()
-        //     this.success = false
-        //     this.error_message = errorData.error_message
-        //   } 
-        // }  
+        this.getCategories()
+        console.log("getCategories called")
       }
-      else {}
+      
+      else {
         const errorData = await res.json();
         this.message = errorData.error_message;
-      },
-    
-
-
+      }
+    },
     async Create_update_category() {
       console.log(this.cat)
       if (this.cat.category_id > 0) {
@@ -178,7 +150,6 @@ const all_category = {
           method: "put",
           headers: {
             "Content-Type": "application/json",
-            // "Cache-Control": "no-store, no-cache",
             "Authentication-Token" : localStorage.getItem("Auth_token")
           },
           body: JSON.stringify(this.cat)
@@ -188,48 +159,8 @@ const all_category = {
             this.success=true
             this.message=data.message
             alert(this.message)
-            this.$router.go(0)
-            // const response = await fetch("http://127.0.0.1:5000/api/category");
-            // console.log(response)
-            // if (response.ok) {
-            //   const data = await response.json();
-            //   console.log(data);
-            //   this.categories = data.filter(category=>category.approve==true );
-            // }
-            // else {
-            //   const errorData = await response.json()
-            //   this.success = false
-            //   this.error_message = errorData.error_message
-            // } 
+            this.getCategories()
             
-          // }
-          // else {
-          //   alert("category Updates initialized, please wait for admin approval")
-          //   this.success=true
-          //   this.message=data.message
-          //   const productApprovalres=await fetch(`/update_category_approval_request/${this.cat.category_id }`)
-          //       if (productApprovalres.ok){
-          //         const productApprovaldata= await productApprovalres.json()
-          //         console.log("sending request for approval", productApprovaldata)
-                
-          
-          //         const response = await fetch("http://127.0.0.1:5000/api/category");
-          //         if (response.ok) {
-          //         const data = await response.json();
-          //         this.categories = data.filter(category=>category.approve==true && category.updateRequest == false && category.deleteRequest==false);
-          //         this.message=""
-          //         }
-          //         else {
-          //           const errorData = await response.json()
-          //           this.success = false
-          //           this.error_message = errorData.error_message
-          //         } 
-          //       }
-          //       else {
-          //         const errorData = await res.json();
-          //         this.error_message = errorData.error_message;
-          //       }  
-          // }
         }
         else {
           const errorData = await res.json();
@@ -251,48 +182,9 @@ const all_category = {
           const data=await res.json()
           this.message=data.message
           alert(this.message)
-          this.$router.go(0)
-          // if (data.approve == true && data.updateRequest == false){
-            // const response = await fetch("http://127.0.0.1:5000/api/category");
-            // if (response.ok) {
-            //   const data = await response.json();
-            //   this.categories = data.filter(category=>category.approve==true );
-            // }
-            // else {
-            //   const errorData = await response.json()
-            //   this.success = false
-            //   this.error_message = errorData.error_message
-            // } 
-          // }
-        //   else if(data.approve === false && data.updateRequest == false) {
-        //   console.log("i am here in else block of add category");
-
-        //     alert("Addition of new category initialized, please wait for admin approval.")
-        //     this.success=true
-        //     this.message=data.message
-        //     const productApprovalres=await fetch("/new_category_approval_request")
-        //       if (productApprovalres.ok){
-        //         const productApprovaldata= await productApprovalres.json()
-        //         console.log("sending request for approval", productApprovaldata)
-                
-        //         const response = await fetch("http://127.0.0.1:5000/api/category");
-        //         if (response.ok) {
-        //         const data = await response.json();
-        //         this.categories = data
-        //         this.message=""
-        //         }
-        //         else {
-        //           const errorData = await response.json()
-        //           this.success = false
-        //           this.error_message = errorData.error_message
-        //         }   
-        //       }
-        //       else {
-        //         const errorData = await res.json()
-        //         this.success = false
-        //         this.error_message = errorData.error_message
-        //         console.log(this.error_message)
-        //       }
+          this.getCategories()
+          // this.$router.go(0)
+          
          }
           else {
             const errorData = await res.json()
@@ -307,7 +199,14 @@ const all_category = {
 
   },
   mounted() {
-    this.getCategories();
+    if(localStorage.getItem("Auth_token")){ 
+      this.getCategories();
+     }
+    else{
+      this.successfirst=false
+      this.error_message="You are not authorized to access this page. Please log in"
+     }
+    
   }
 }
 

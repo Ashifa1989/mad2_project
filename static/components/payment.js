@@ -2,6 +2,7 @@ import { useGetPayments } from './paymentService.js'
 const payment={
     template :`
     <div>
+    <div v-if="successfirst">
         <div  class="row row-cols-1 row-cols-md-4 g-4">
             <div v-if="success" v-for="pay in payments">
                 <div class="col">
@@ -11,13 +12,21 @@ const payment={
                         <div>cvv: {{ pay.cvv }}</div>
                         <div>expiry_date: {{ pay.expiry_date }}</div>
                         
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setSelectedPayment(pay)"> Update</button>
-                        <button class="btn btn-primary" @click.prevent="deletepayment(pay.payment_id)">Delete</button>
+                        <button type="button"  data-bs-toggle="modal" data-bs-target="#exampleModal" class="btn btn-success" style="background-color: rgb(76, 175, 80)" @click.prevent="setSelectedPayment(pay)"> Update</button>
+                        <button class="btn btn-danger" style="background-color: rgb(244, 67, 54);" @click.prevent="deletepayment(pay.payment_id)">Delete</button>
                         
                     </div>
                 </div>
             </div>
         </div>
+        <br>
+        <div>
+            <button type="button" class="btn btn-success" style="background-color: rgb(76, 175, 80)" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setpayment()">
+                Add Payment
+            </button>
+        </div>
+    </div>
+    <div v-else> {{ error_message }}</div>
 
 
         <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -54,12 +63,7 @@ const payment={
             </div>
         </div>
     
-    <br>
-        <div>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal" @click.prevent="setpayment()">
-                Add Payment
-            </button>
-        </div>
+    
 
 
     </div>
@@ -76,7 +80,8 @@ const payment={
             payment:{},
             success:true,
             error_message:"",
-            apiBaseUrl: "http://127.0.0.1:5000/api/"
+            apiBaseUrl: "http://127.0.0.1:5000/api/",
+            successfirst:true
         }
 
     },
@@ -160,8 +165,14 @@ const payment={
         this.get_payment=useGetPayments
     },
     async mounted(){
-        console.log("i am here")
-        this.payments= await this.get_payment() 
+        if(localStorage.getItem("Auth_token")){ 
+            this.payments= await this.get_payment() 
+          }
+        else{
+            this.successfirst=false
+            this.error_message="You are not authorized to access this page. Please log in"
+           }
+        
     },
 }
 export default payment
