@@ -62,7 +62,7 @@ const all_category = {
                       <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
                       <button type="button"class="btn btn-success" style="background-color: rgb(76, 175, 80)" @click="Create_update_category()" >Save</button>
                     </div>
-                    <div v-if="success">{{ message }}</div>
+                    
                     <div v-else>{{ error_message }}</div>
               </div>
           </div>
@@ -160,6 +160,7 @@ const all_category = {
             this.message=data.message
             alert(this.message)
             this.getCategories()
+            // this.$router.go(0)
             
         }
         else {

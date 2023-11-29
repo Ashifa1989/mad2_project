@@ -9,34 +9,18 @@
     display: flex;
     align-items: center;
   }
-
-  
   
 .card-img-top {
-    height: 200px; /* Set the desired height for the images */
-    object-fit: cover; /* Maintain aspect ratio and cover the entire container */
-    width: 100%; /* Ensure the image takes up the entire width of its container */
+    height: 300px;
+    width: 200px;
+    object-fit: cover; 
+    
   }
-
-  /* table, th, td {
-    border: 1px solid black;
-    border-collapse: collapse;
-    padding: 10px;
-  } */
-
-  th {
+  
+th {
     background-color: #f0f0f0;
   }
   
-  /* button {
-    margin: 10px;
-    padding: 5px;
-    background-color: rgb(76, 175, 80);
-    color: white;
-    border: none;
-    cursor: pointer;
-  }
- */
-
-
   
+
+   

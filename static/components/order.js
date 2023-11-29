@@ -7,6 +7,7 @@ const order = {
 <div>Address Details : {{ order.address.street }} {{ order.address.city}} {{order.address.state}} {{order.address.postal_code}}</div>
 <div>Payment type : {{order.payment.type}} </div>
 <div>Order date : {{order.order_date}} </div>
+
 <div v-if="success" v-for="item in order.order_items" class="card">
   <div>{{ message }}</div>
   <div> Name:{{ item.product.product_name }}</div>
@@ -16,6 +17,7 @@ const order = {
 </div>
 
 </div>
+<p><strong>Total Amount: RM{{ order.total_price }}</strong></p>
 </div>
 <div v-else> {{ error_message }}</div>
 
@@ -47,6 +49,7 @@ const order = {
                 this.success = true
                 this.order = data
                 this.message = data.message
+                
             }
             else {
                 const errorData = await res.json()

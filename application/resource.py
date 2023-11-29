@@ -1,28 +1,22 @@
 from  flask_restful import Api, Resource,  fields, marshal_with, reqparse 
-from model import db, User as user_model, Role, Category, Product, Cart, Order, Order_item, RolesUsers, Address,Payment
+from application.model import db, User as user_model, Role, Category, Product, Cart, Order, Order_item, RolesUsers, Address,Payment
 from flask_security  import   auth_required, roles_required, current_user, roles_accepted
 from flask import make_response
 from flask_security.utils import hash_password, verify_password 
 from werkzeug.exceptions import HTTPException
 import json
 from datetime import datetime
-from tasks import send_admin_approval_request, new_category_approval_request, update_category_approval_request, delete_category_approval_request
-import redis
 from flask_mail import Mail, Message
-# from fpdf import FPDF
-import matplotlib.pyplot as plt
 from datetime import datetime, timedelta, date
+import redis
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
-import tasks
-
-
-from celery.result import AsyncResult
-from flask import send_file
-from cachedata import get_all_product, get_product_by_category, get_all_category
+from application.tasks import notify_manager_for_signup_Approval, notify_manager_for_signup_reject, new_category_approval_request
+from application.tasks import *
+from application.cachedata import get_all_product, get_all_category, cache
 from time import perf_counter_ns
-# import logging
+import logging
 
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 api = Api(prefix="/api")
@@ -142,6 +136,7 @@ add_product_parser.add_argument("image_url")
 add_product_parser.add_argument("manufacture_date")
 add_product_parser.add_argument("expairy_date")
 add_product_parser.add_argument("timestamp")
+add_product_parser.add_argument("quantity")
 
 update_product_parser = reqparse.RequestParser()
 update_product_parser.add_argument("product_id")
@@ -154,6 +149,7 @@ update_product_parser.add_argument("image_url")
 update_product_parser.add_argument("manufacture_date")
 update_product_parser.add_argument("expairy_date")
 update_product_parser.add_argument("timestamp")
+update_product_parser.add_argument("quantity")
 
 
 search_parser = reqparse.RequestParser()  
@@ -250,22 +246,11 @@ class UserApi(Resource):
         db.session.add(new_user)
         db.session.commit()
 
-        #add customer role to the new registered user
-        # role = Role.query.filter_by(name = "Customer").first()
-        # role_user = RolesUsers()
-        # role_user.user_id = new_user.id
-        # role_user.role_id = role.id
-
-        # db.session.add(role_user)
-        # db.session.commit()
-
         return ("Successfully created new user", 200)
     @auth_required("token")
     @marshal_with(output_user_field)
     def put(self): #update user information
         id=current_user.id
-        # if id is None:
-        #     return {"error_message":"you are not logged In!! please login " , "status_code":401}
         user = user_model.query.filter_by(id = id).first()
         if user is None :
              raise SchemaValidationError(status_code=404, error_message="user not found")
@@ -312,43 +297,32 @@ class ManagerApi(Resource):
 
         db.session.add(new_user)
         db.session.commit()
-        # manager_role = Role.query.filter_by(name = "Manager" ).first()
-        # customer_role = Role.query.filter_by(name="Customer").first()
-        # role_manager = RolesUsers(user_id= new_user.id, role_id= manager_role.id )
-        # role_customer=RolesUsers(user_id= new_user.id, role_id=customer_role.id)
-
-        # db.session.add(role_manager)
-        # db.session.add(role_customer)
-        # db.session.commit()
         send_admin_approval_request()
         return {"message" :"Successfully created the acoount.please wait for the Admin approval"},200
-    
-    
-              
-        
 
-import config
 class Categories(Resource):
     @auth_required("token")
     @marshal_with(output_Category_field)
     def get(self):
-        config.app.logger.info("inside get all category using info")
+        logger.info("inside get all category using info")
         start=perf_counter_ns()
         all_category=get_all_category()
         end=perf_counter_ns()
         print("timetaken", end-start)
-        config.app.logger.debug("inside get all category using degub")
+        logger.debug("inside get all category using degub")
         
         return all_category
     
-    # @marshal_with(output_Category_field)
+    
     @auth_required("token")
     @roles_accepted("Admin", "Manager")
     def post(self):
+        cache.clear()
         args= add_category_parser.parse_args()
         category_name = args.get("category_name", None)
         print(category_name)
         image = args.get("imagelink", None)
+        
         category =  Category.query.filter_by(category_name=category_name).first()
     
         if category:
@@ -359,6 +333,7 @@ class Categories(Resource):
         user_id=current_user.id
         user=user_model.query.filter_by(id=user_id).first()
         for  role in user.roles:
+            print(role.name)
             if role=="Admin":
                 db.session.add(new_category)
                 db.session.commit()
@@ -368,9 +343,12 @@ class Categories(Resource):
                 new_category.approve=False
                 db.session.add(new_category)
                 db.session.commit()
+                print(' i am before task call')
                 new_category_approval_request()
+                print("i am after task call")
                 # return new_category
                 return {"message":"Category creation initiated! Please await admin approval."}, 200
+            
             else:
                 return("you are not authorized to create new category")
     
@@ -389,6 +367,7 @@ class CategoryApi(Resource):
     @auth_required("token")
     @roles_accepted("Admin","Manager")
     def put(self, id):
+        cache.clear()
         category =  Category.query.filter_by(category_id=id).first()
         args=update_category_parser.parse_args()
         category_name = args.get("category_name", None)
@@ -407,8 +386,8 @@ class CategoryApi(Resource):
                     db.session.commit()
                     print(category)
                     # return category
-                    return {"message":"Category updated scuuessfully"}, 200
-                elif role=="Manager":
+                    return {"message":"Category updated successfully"}, 200
+                elif role=="Manager" :
                     category.updateRequest=True
                     db.session.commit()
 
@@ -433,6 +412,7 @@ class CategoryApi(Resource):
     @auth_required("token")
     @roles_accepted("Admin","Manager")
     def delete(self, id):
+        cache.clear()
         category =  Category.query.filter_by(category_id=id).first()
         user_id=current_user.id
         user=user_model.query.filter_by(id=user_id).first()
@@ -460,20 +440,21 @@ class products(Resource):
     @auth_required("token")
     @marshal_with(output_product_field)
     def get(self):
-        config.app.logger.info("inside get all product using info")
+        logger.info("inside get all product using info")
         start=perf_counter_ns()
         # product = Product.query.order_by(Product.timestamp.desc()).all()  # Sort by timestamp
         products=get_all_product()
         end=perf_counter_ns()
         print("timetaken", end-start)
-        config.app.logger.debug("inside get all product using info")
+        logger.debug("inside get all product using info")
         return products
     
     
     @auth_required("token")
     @roles_accepted("Admin","Manager")
     @marshal_with(output_product_field)
-    def post(self):                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+    def post(self):
+        cache.clear()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
         args=add_product_parser.parse_args()
        
         name = args.get("product_name", None)
@@ -484,7 +465,7 @@ class products(Resource):
         image_url = args.get("image_url", None)
         manufacture_date = args.get("manufacture_date", None)
         expairy_date = args.get("expairy_date", None)
-        # timestamp = args.get("timestamp", None)
+        unit=args.get("quantity", None)
         product = Product.query.filter_by(product_name=name).first()
         if product:
              raise AlreadyExistsError(status_code=409,  error_message="Product name already exists")
@@ -492,7 +473,7 @@ class products(Resource):
         new_product = Product(product_name=name, Description=Description, 
                               Catagory_id=Catagory_id, price_per_unit=price_per_unit,
                               Stock=Stock, image_url=image_url, manufacture_date=manufacture_date,
-                              expairy_date=expairy_date, timestamp=datetime.now())
+                              expairy_date=expairy_date, timestamp=datetime.now(), quantity=unit)
         
         db.session.add(new_product)
         db.session.commit()
@@ -515,6 +496,7 @@ class ProductApi(Resource):
     @roles_accepted("Admin","Manager")
     @marshal_with(output_product_field)
     def put(self, id):
+        cache.clear()
         update_product= Product.query.filter_by(product_id=id).first()
         if update_product is None:
              raise SchemaValidationError(status_code=404, error_message="product not found")
@@ -529,7 +511,7 @@ class ProductApi(Resource):
         image_url = args.get("image_url", None)
         manufacture_date = args.get("manufacture_date", None)
         expairy_date = args.get("expairy_date", None)
-
+        unit=args.get("quantity", None)
         
         update_product.product_name = name
         update_product.Description = Description
@@ -539,14 +521,15 @@ class ProductApi(Resource):
         update_product.image_url = image_url
         update_product.manufacture_date = manufacture_date
         update_product.expairy_date = expairy_date
+        update_product.quantity=unit
         db.session.commit()
         return {"message":"Successfully updated product"},200
     
 
     @auth_required("token")
     @roles_accepted("Admin","Manager")
-    # @marshal_with(output_product_field)
     def delete(self, id):
+        cache.clear()
         product= Product.query.filter_by(product_id=id).first()
         if product is None:
             raise SchemaValidationError(status_code=404, error_message="product not found")
@@ -572,14 +555,7 @@ class search_product(Resource):
 
         # Add filters based on query parameters
         if category_name:
-            config.app.logger.info("inside get all product by category using info")
-            start=perf_counter_ns()
-            query=get_product_by_category(category_name)
-            # query = query.join(Category).filter(Category.category_name==category_name)
-            end=perf_counter_ns()
-            print("timetaken", end-start)
-            config.app.logger.debug("inside get all product by category using debug")
-            
+            query = query.join(Category).filter(Category.category_name==category_name)
         if min_price:
             query = query.filter(Product.price_per_unit >= min_price)
         if max_price:
@@ -612,31 +588,14 @@ class search_category(Resource):
             return category
         
 class CartApi(Resource):
-    @auth_required("token")
+    # @auth_required("token")
     @marshal_with(output_cart_field)
     def get(self):
         user_id=current_user.id
         #print(user_id)
         carts=Cart.query.filter_by(user_id=user_id).all()
         if carts:
-            cart_data = []
-            for cart in carts:
-                
-                cart_data.append({
-                    "cart_id": cart.cart_id,
-                    "user_id": cart.user_id,
-                    "product_id": cart.product.product_id,
-                    "product_name": cart.product.product_name,
-                    "image_url": cart.product.image_url,
-                    "Description":cart.product.Description,
-                    "price_per_unit": cart.product.price_per_unit,
-                    "quantity": cart.quantity,
-                    "total_price":cart.total_price
-                })
-            if cart_data:
-                return cart_data
-            else:
-                return {"message":"Your cart is empty!! Continue shopping to browse and search for items."}
+            return carts
         else:
             return {"message":"Your cart is empty!! Continue shopping to browse and search for items."}, 204
     @auth_required("token")
@@ -684,7 +643,7 @@ class CartApi(Resource):
         cart.total_price = cart.quantity * cart.price_per_unit
         db.session.commit()
         return cart
-        # return {"message": "succesfully updated the cart"}
+        
     @auth_required("token")
     def delete(self, cart_id) :
         # print(cart_id)
@@ -712,28 +671,24 @@ class OrderApi(Resource):
     @marshal_with(output_order_field)
     def post(self):
         args= order_parser.parse_args()
-        # print(args)
         payment=args.get("selectedpayment",None)
         address=args.get("selectedaddress",None)
-        # print(address)
-        # print(payment)
         user_id = current_user.id
         cart_items=Cart.query.filter_by(user_id=user_id).all()
-        # print(cart_items)
         if cart_items == []:
             raise SchemaValidationError(status_code=404, error_message="there is no item in cart ") 
         total_price=0
         for item in cart_items:
             total_price=total_price+item.total_price
             item.product.Stock=item.product.Stock-item.quantity
-        # print(item.product.Stock)
+        
         new_order = Order(user_id=user_id, total_price=total_price,  
                     order_date=datetime.now(),
                     payment_id=payment,
                     address_id=address)
         db.session.add(new_order)
         db.session.commit()
-        # print(new_order.address_id)
+        
         for cart_item in cart_items:
             order_item = Order_item(
                 order_id=new_order.order_id,  
@@ -748,7 +703,7 @@ class OrderApi(Resource):
         db.session.commit()
         print(order_item)
         return order_item
-        # return {"message":"your purchase is successfull. thank you for shopping with us"}
+        
 class AllOrder(Resource):
     @auth_required("token")
     @marshal_with(output_order_field)
@@ -768,7 +723,6 @@ class AddressApi(Resource):
     def post(self):
         user_id = current_user.id
         args= address_parser.parse_args()
-        # username=args.get("username", None)
         street=args.get("street", None)
         city = args.get("city", None)
         state = args.get("state",  None)
@@ -785,18 +739,15 @@ class AddressApi(Resource):
         username=args.get("username", None)
         street=args.get("street", None)
         city = args.get("city", None)
-        # country=args.get("country",None)
         state=args.get("state",None)
         postal_code= args.get("postal_code", None)
         update_address= Address.query.filter_by(address_id=id).first()
-        # print(update_address)
         update_address.user_id=user_id
         update_address.street= street
         update_address.city=city
         update_address.postal_code=postal_code
-        
         update_address.state=state
-        # print(update_address.state)
+        
         
         db.session.commit()
         return {"message": "successfully updated address details"}
@@ -874,10 +825,15 @@ class AdminApprovalSignUpRequest(Resource):
     @roles_required("Admin")
     def put(self, id):
         manager=user_model.query.filter_by(id=id).first()
-        manager.active=True
-        db.session.commit()
-        tasks.notify_manager_for_signup_Approval(id)
-        return {"message" : "manager role approved from admin"}, 200
+        customer_role=Role.query.filter_by(name="Customer").first()
+        if customer_role is not None:
+            role = RolesUsers.query.filter_by(user_id=manager.id, role_id=customer_role.id).first()
+            if role is not None:
+                db.session.delete(role)
+                manager.active=True
+                db.session.commit()
+                notify_manager_for_signup_Approval(id)
+                return {"message" : "manager role approved from admin"}, 200
     
 class AdminRejectSignUpRequest(Resource):
     @auth_required("token")
@@ -894,7 +850,7 @@ class AdminRejectSignUpRequest(Resource):
             if role is not None:
                 db.session.delete(role)  
                 db.session.commit()
-                tasks.notify_manager_for_signup_reject(id)
+                notify_manager_for_signup_reject(id)
                 return {"message" : "manager role rejected from admin"}, 200
         
 class AdminApprovalCategoryRequest(Resource):
@@ -908,12 +864,12 @@ class AdminApprovalCategoryRequest(Resource):
              return {"status":204, "error_message":"No new category approval Request "}
         else:
             return Categories
-    # # @roles_required("Admin")
-    # def put(self, id):
-    #     category= Category.query.filter_by(category_id=id).first()
-    #     category.approve=True
-    #     db.session.commit()
-    #     return {"message": "Admin approved the category update. Please proceed with the changes."},200
+    @roles_required("Admin")
+    def put(self, id):
+        category= Category.query.filter_by(category_id=id).first()
+        category.approve=True
+        db.session.commit()
+        return {"message": "Admin approved  new category request. Please proceed with the changes."},200
     @auth_required("token")
     @roles_required("Admin")
     def delete(self,id):
@@ -1012,5 +968,4 @@ api.add_resource(AdminRejectSignUpRequest,  "/Admin_reject/<int:id>")
 api.add_resource(AdminApprovalCategoryRequest,  "/Admin_Approval_category_request", "/Admin_Approval_category_request/<int:id>")
 api.add_resource(ApprovreCategoryUpdateDeleteRequest, "/categoryUpdateRequest","/categoryUpdateRequest/<int:id>", "/categoryDeleteRequest/<int:id>")
 api.add_resource( RejectCategoryUpdateDeleteRequest, "/categoryDeleteRequest", "/rejectCategoryUpdateRequest/<int:id>",  "/rejectCategoryDeleteRequest/<int:id>")
-# api.add_resource(send_admin_approval_request, "/send_admin_approval_request")
 api.add_resource(AllOrder,"/allOrder")

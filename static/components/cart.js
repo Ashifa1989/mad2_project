@@ -25,7 +25,10 @@ const cart = {
                         <div v-if="success" v-for="product in products">
                             <li class="list-group-item d-flex justify-content-between lh-sm">
                                 <div>
-                                    <div><h5 class="my-0 "  <a href="/#/home" class="text-dark">{{product.product_name}} </a></h5></div>
+                                    <div><h5 class="my-0 "  
+                                    <a  @click="fetchProduct(product.product_id)">
+                                    {{product.product.product_name}} </a></h5>
+                                    </div>
                                     <div ><small class="text-body-secondary">Quantity: {{product.quantity}} </small></div>
                                     <div>
                                       <button @click="decrementQuantity(product)">-</button>
@@ -173,6 +176,7 @@ const cart = {
 
         if (res.status == 200) {
           const data = await res.json()
+          console.log(data)
           this.success = true
           this.products = data
           this.cart_total_amount = data.reduce((accum, item) => accum + item.total_price, 0)
@@ -216,7 +220,7 @@ const cart = {
     async checkout() {
       if (this.address.address_id == 0 || this.payment.payment_id == 0) {
         alert("Please select address and payment method");
-        return;
+        
       }
 
       //console.log("add_id", this.address.address_id)
@@ -299,7 +303,11 @@ const cart = {
           this.success = false
           this.error_message = "Quantity less than 1 decrement not allowed"
         }
-    }
+    },
+    async fetchProduct(id){
+      this.$router.push(`/productInformation/${id}`)
+        }
+    
   
   },
   created() {

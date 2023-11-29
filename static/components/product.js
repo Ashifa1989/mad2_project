@@ -21,11 +21,11 @@ const product = {
             <input type="text" class="form-control"  id="Description" v-model="product.Description" placeholder="Description"></input>
         </div>
         <div class="mb-3">   
-            <label for="price_per_unit" class="form-label" >Price per unit:</label>
+            <label for="price_per_unit" class="form-label" >Price:</label>
             <input type="text" class="form-control"  id="price_per_unit" v-model="product.price_per_unit" placeholder="Price per unit"></input>
         </div>
         <div class="mb-3">
-            <label for="quantity" class="form-label">Quantity:</label>
+            <label for="quantity" class="form-label">Unit:</label>
                 <select class="form-select" id="quantity" v-model="product.quantity">
                     <option value="kg">kg</option>
                     <option value="L">L</option>

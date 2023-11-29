@@ -38,7 +38,7 @@ const home = {
             
               <h5 class="card-title">{{ product.product_name }}</h5>
               <p class="card-text">{{ product.Description }} </p>
-              <div> Price: RM{{ product.price_per_unit }} {{ product.quantity}} </div>
+              <div> Price: Rm{{ product.price_per_unit }}/{{ product.quantity}} </div>
 
               <div style="color: red; padding-top: 30px;" v-if="product.Stock <=0">Out Of Stock</div>
               <div  style="padding-top: 30px;" v-else><button class="btn btn-success " @click.prevent="addtoCart(product)">Add to Cart</button></div>

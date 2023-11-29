@@ -19,13 +19,13 @@ class Role(db.Model, RoleMixin):
     id = db.Column(db.Integer(), primary_key=True)
     name = db.Column(db.String(80), unique=True)
     description = db.Column(db.String(255))
-    permissions = db.Column(db.UnicodeText)
+    
 
 class User(db.Model,UserMixin):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True)
-    username = db.Column(db.String(255), unique=True, nullable=True)
+    username = db.Column(db.String(255), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     active = db.Column(db.Boolean())
     fs_uniquifier = db.Column(db.String(255), unique=True , nullable=False)
@@ -44,7 +44,6 @@ class User(db.Model,UserMixin):
         self.fs_uniquifier = generate_random_uniquifier()
 
 def generate_random_uniquifier():
-    # Generate a unique value using UUID
     uniquifier = str(uuid.uuid4())
     return uniquifier
 
@@ -67,16 +66,15 @@ class Product(db.Model):
     __tablename__ = "product"
     product_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     product_name = db.Column(db.String, unique=True, nullable=False)
-    Description = db.Column(db.Text)
+    Description = db.Column(db.Text, nullable=False)
     Catagory_id = db.Column(db.Integer, db.ForeignKey('category.category_id'))
-    price_per_unit =  db.Column(db.Float)
-    quantity = db.Column(db.String)
-    Stock = db.Column(db.Integer)
+    price_per_unit =  db.Column(db.Float, nullable= False)
+    quantity = db.Column(db.String, nullable=False)
+    Stock = db.Column(db.Integer, nullable=False)
     image_url = db.Column(db.Text, nullable=True)
-    manufacture_date = db.Column(db.String)
-    expairy_date = db.Column(db.String)
+    manufacture_date = db.Column(db.String, nullable=False)
+    expairy_date = db.Column(db.String, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    promotions = db.relationship('Promotion', backref='product', cascade='all, delete') # one to many relationship btw product and promotion
     carts = db.relationship('Cart', backref='product')
     
 class Cart(db.Model):
@@ -88,8 +86,7 @@ class Cart(db.Model):
     quantity = db.Column(db.Integer)
     total_price = db.Column(db.Float)
 
-    # category = db.relationship("Category", backref='cart', cascade ='all, delete') #one to many relation btw cart and catogory
-     # one to many relation btw cart and product
+    
     
 class Order(db.Model):
     __tablename__ = "order" 
@@ -118,27 +115,17 @@ class Payment(db.Model):
     __tablename__ = "payment"  
     payment_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'),nullable=False)
-    type=db.Column(db.Integer)
-    card_number =db.Column(db.Integer)
-    cvv=db.Column(db.Integer)
-    expiry_date = db.Column(db.String)
+    type=db.Column(db.String, nullable=False)
+    card_number =db.Column(db.Integer, nullable=False)
+    cvv=db.Column(db.Integer, nullable=False)
+    expiry_date = db.Column(db.String, nullable=False)
     
 class Address(db.Model):
     __tablename__ = "address" 
     address_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    street = db.Column(db.String)
-    city = db.Column(db.String)
-    state = db.Column(db.String)
-    postal_code = db.Column(db.String)
+    street = db.Column(db.String, nullable=False)
+    city = db.Column(db.String, nullable=False)
+    state = db.Column(db.String, nullable=False)
+    postal_code = db.Column(db.String, nullable=False)
 
-class Promotion(db.Model):
-    __tablename__ = "promotion" 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-    description = db.Column(db.String)
-    start_date = db.Column(db.DateTime, nullable=False)
-    end_date = db.Column(db.DateTime, nullable=False)
-    discount_type = db.Column(db.String, nullable=False)  
-    discount_value = db.Column(db.Float, nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.product_id'))

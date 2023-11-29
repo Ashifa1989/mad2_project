@@ -3,7 +3,7 @@ const all_product = {
     <div>
     <div v-if="successfirst">
     <div v-if="success">{{ message }}</div>
-    <div class="container text-auto  mt-3">
+    <div class="container ">
       <div v-if="products.length >0">
         <table class="table">
           <thead >
@@ -14,7 +14,7 @@ const all_product = {
               <th scope="col">Description</th>
               <th scope="col">Stock</th>
               <th scope="col">Price</th>
-              <th scope="col">Quantity</th>
+              <th scope="col">Unit</th>
               <th scope="col">Image Link</th>
               <th scope="col">Manufacture Date</th>
               <th scope="col">Expiry Date</th>

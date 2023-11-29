@@ -149,7 +149,7 @@ const admin = {
                 <div class="modal-dialog">
                   <div class="modal-content">
                     <div class="modal-header">
-                      <h1 class="modal-title fs-5" id="exampleModalLabel">Update Manager Details</h1>
+                      <h1 class="modal-title fs-5" id="exampleModalLabel">Update Admin Details</h1>
                       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
@@ -161,10 +161,11 @@ const admin = {
                         <label class="form-label">Email:</label>
                         <input type="text" class="form-control" v-model="user.email">
                       </div>
+                      
                     </div>
                     <div class="modal-footer">
                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                      <button type="button" @click="updateAdmin" class="btn btn-success" style="background-color: rgb(244, 67, 54)">
+                      <button type="button" @click="updateAdmin" class="btn btn-success" style="background-color: rgb(76, 175, 80)">
                       Save</button>
                     </div>
                     <div v-if="success">{{ message }}</div>
@@ -246,7 +247,7 @@ const admin = {
         const data = await res.json()
         this.user = data
         this.getAdmin()
-        this.$router.go(0)
+        // this.$router.go(0)
       }
       else {
         const errorData = await res.json()
@@ -527,18 +528,6 @@ const admin = {
       if (res.ok) {
         alert("rejected the update category Request")
         this.getAdmin()
-      //   const res = await fetch(`${this.apiBaseUrl}/categoryUpdateRequest`) // reload the page
-      //   if (res.ok) {
-      //     const data = await res.json()
-      //     this.success = true
-      //     this.updateCategories = data
-      //   }
-
-      //   else {
-      //     this.success = false
-      //     this.error_message = "No pending category update requests"
-      //   }
-
       }
       else {
         const errorData = await res.json()
@@ -546,11 +535,6 @@ const admin = {
         this.errorMessage = errorData.errorMessage
       }
     },
-
-
-
-
-
 
     async DeleteCategoryRequest(id) {
       const res = await fetch(`${this.apiBaseUrl}/categoryDeleteRequest/${id}`, {
@@ -613,11 +597,6 @@ const admin = {
         this.errorMessage = errorData.errorMessage
       }
     },
-
-
-
-
-
 
   },
 

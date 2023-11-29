@@ -53,7 +53,7 @@ const profile = {
                     </div>
                     <div class="modal-footer">
                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                      <button type="button" @click="updateUser()" style="background-color: rgb(244, 67, 54);>
+                      <button type="button" @click="updateUser()" class="btn btn-success" style="background-color: rgb(76, 175, 80)">
                       Save</button>
                     </div>
                     <div v-if="!success">{{ error_message }}</div>

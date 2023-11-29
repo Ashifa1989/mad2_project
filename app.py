@@ -1,136 +1,69 @@
-from flask import Flask, render_template, send_file, jsonify
-from api.resource import api
-from model import db, User, Role, Product, Category, Order
-from security import user_datastore, sec
-from flask_security import Security, auth_required,LoginForm
+from flask import   Flask, render_template, send_file, jsonify
+# from flask_security import SQLAlchemyUserDatastore, Security
 from flask_security.utils import hash_password
-from worker import  create_celery_app
-from celery.result import AsyncResult
-import tasks
-from datetime import datetime as dt, timedelta, date
+from application.model import db, User, Role
+from config import DevelopmentConfig
+from application.resource import api
+from application.security import user_datastore, sec
+from application.worker import create_celery_app
+from application.cachedata import cache
+from application.tasks import *
 from celery.schedules import crontab
-from flask_mail import Mail, Message
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
-from smtplib import SMTP
-from flask_caching import Cache
-
-app = Flask(__name__)
-
-app.config.from_mapping(
-    CELERY=dict(
-        broker_url="redis://localhost:6379/1",
-        result_backend="redis://localhost:6379/2",
-        task_ignore_result=True,
-        # timezone="Asia/Kolkata"
-        timezone="Asia/Kuala_Lumpur"  
-    ),
-)
+from application.tasks import *
 
 
-app.config['MAIL_USERNAME'] = 'your_username'
-app.config['MAIL_PASSWORD'] = 'your_password'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['SECRET_KEY'] = '1004@ayz'
-app.config['SECURITY_PASSWORD_SALT'] = 'salt'
-app.config['WTF_CSRF_ENABLED'] = False
-app.config['SECURITY_TOKEN_AUTHENTICATION_HEADER'] ='Authentication-Token'
-app.config['SECURITY_PASSWORD_HASH'] = 'bcrypt'
-# app.config['SECURITY_TOKEN_MAX_AGE'] = 600000
-# app.config["SECURITY_EMAIL_VALIDATOR_ARGS"] = {"check_deliverability": False}
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(DevelopmentConfig)
+    db.init_app(app)
+    api.init_app(app)
+    sec.init_app(app, user_datastore)
+    cache.init_app(app)
+    with app.app_context():
+        import application.view, application.resource
 
-CACHE_TYPE="RedisCache" 
-CACHE_REDIS_HOST="localhost"
-CACHE_REDIS_PORT=6379
+    return app
 
-api.init_app(app) #integrate the api with flask app
-db.init_app(app)
-sec.init_app(app, user_datastore)
-mail = Mail(app)
-cache=Cache(app)
-
-
+app = create_app()
 celery_app = create_celery_app(app)
-# @app.before_first_request 
-# def CreateDB():
-#     db.create_all()  
-#     if not user_datastore.find_role("Admin"):
-#         user_datastore.create_role(name="Admin")
-#         db.session.commit()
 
-#     if not user_datastore.find_role("Customer"):
-#         user_datastore.create_role(name="Customer")
-#         db.session.commit()
+@app.before_first_request 
+def CreateDB():
+    db.create_all()  
+    if not user_datastore.find_role("Admin"):
+        user_datastore.create_role(name="Admin")
+        db.session.commit()
+
+    if not user_datastore.find_role("Customer"):
+        user_datastore.create_role(name="Customer")
+        db.session.commit()
     
-#     if not user_datastore.find_role("Manager"):
-#         user_datastore.create_role(name="Manager")
-#         db.session.commit()
+    if not user_datastore.find_role("Manager"):
+        user_datastore.create_role(name="Manager")
+        db.session.commit()
 
-#     if not user_datastore.find_user(email="user1@gmail.com"):
-#         user_datastore.create_user( username="user1",password=hash_password("1234"),  email="user1@gmail.com",  roles=['Admin'] )
-#         db.session.commit()
+    if not user_datastore.find_user(email="user1@gmail.com"):
+        user_datastore.create_user( username="user1",password=hash_password("1234"),  email="user1@gmail.com",  roles=['Admin'] )
+        db.session.commit()
+
 
 @celery_app.on_after_finalize.connect
 def setup_periodic_tasks_for_dailyremainder(sender, **kwargs):
     sender.add_periodic_task(
-        crontab(hour=23, minute=25),  # Schedule daily 
-        tasks.send_remainder_via_email.s(),  # Task to execute
+        crontab(hour=21, minute=20),  # Schedule daily 
+        send_remainder_via_email.s(),  # Task to execute
         name="remainder mail for user"  # Name of the task
     )
 
 @celery_app.on_after_finalize.connect
 def setup_periodic_tasks_for_monthly_report(sender, **kwargs):
     sender.add_periodic_task(
-        crontab(hour=23, minute=25,day_of_month='24'),  # Schedule monthly 
-        tasks.generate_send_monthly_report_via_email.s(),  # Task to execute
+        crontab(hour=21, minute=20, day_of_month='28'),  # Schedule monthly 
+        generate_send_monthly_report_via_email.s(),  # Task to execute
         name="users_monthly_report"  # Name of the task
     )
 
-@app.route("/DownloadCSVFile")
-def DownloadCSVFile():
-    
-        a=tasks.generate_productDetails_csv.delay()
-        return{
-            "task_id": a.id,
-            "task_state" :a.state,
-            "task_result": a.result
-        }
-
-@app.route("/status/<task_id>")
-def CeleryTaskStatus(task_id):
-        task = AsyncResult(task_id)
-        return {
-            "task_id": task.id,
-            "task_state": task.state,
-            "task_result": task.result
-        }
-
-@app.route("/download-file")    
-def download_file():
-        return send_file("static/product_data.csv")
 
 
-@app.route("/notify_manager_csv_download/<id>")
-def notify_manager_csv_download(id):
-    try:
-        a=tasks.notify_manager_for_Download_csv_via_email.delay(id)
-        return{
-                "task_id": a.id,
-                "task_state" :a.state,
-                "task_result": a.result
-                
-            }
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)

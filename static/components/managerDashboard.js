@@ -27,7 +27,7 @@ const managerDashboard = {
         <div class="row">
             <div class="col-md-6">
                 
-                <button class="btn btn-success btn-block" @click="DownloadCSVFile">Export Order Report as CSV</button>  
+                <button class="btn btn-success btn-block" @click="DownloadCSVFile">Export Product Report as CSV</button>  
             </div>
             
 
@@ -125,16 +125,31 @@ const managerDashboard = {
     },
     async DownloadCSVFile() {
       const res = await fetch("/DownloadCSVFile")
-      if (res.ok) {
-        const data = await res.json()
-        //console.log("details of celery job", data)
-        const id = localStorage.getItem("user_id")
+      const data = await res.json()
+      const id = localStorage.getItem("user_id")
 
-        const notifyres = await fetch(`/notify_manager_csv_download/${id}`)
-        //console.log("status", notifyres.status)
-        const notifydata = await notifyres.json()
-        window.location.href = "/download-file"
+      if (res.ok) {
+        
+        const taskId=data["task_id"]
+        const intv= setInterval(async () =>{
+        const csv_res = await fetch(`/status/${taskId}`)
+        if (csv_res.ok){
+          clearInterval(intv)
+          window.location.href = "/download-file"
+          const notifyres = await fetch(`/notify_manager_csv_download/${id}`)
+          //console.log("status", notifyres.status)
+          const notifydata = await notifyres.json()
+          
+        }
+        
+        }, 1000)
+        
+       
+        
+        
       }
+      
+
     },
   },
   async mounted() {

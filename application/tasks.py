@@ -1,30 +1,38 @@
-from worker import create_celery_app
+# from application.worker import create_celery_app
 from celery import shared_task
-from model import db,User,Product, Order, Role
+from application.model import db,User,Product, Order, Role
 from httplib2 import Http
 from json import dumps
-from flask_mail import Message
 import csv
 import base64
 import pickle
 import redis
 from datetime import datetime, timedelta, date
-from celery.schedules import crontab
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+# from celery.schedules import crontab
+# from reportlab.lib.pagesizes import letter
+# from reportlab.pdfgen import canvas
+from smtplib import SMTP
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 import smtplib
-from smtplib import SMTP
+import pandas as pd
 from flask import jsonify
 from datetime import datetime as dt, timedelta, date
 from config import *
-from flask_security import current_user
 import logging
 
+
+
+
 logger = logging.getLogger(__name__)
+SMPTP_SERVER_HOST="192.168.0.160"
+SMPTP_SERVER_PORT= 1025
+SENDER_ADDRESS="email@user1.com"
+SENDER_PASSWORD=""
+
+
 
 
 @shared_task
@@ -159,17 +167,14 @@ def send_email_with_attachment(to_address, subject, message, content="html", att
         s.send_message(msg)
         s.quit()
         return True
-    
-
-    
 
 @shared_task
 def generate_send_monthly_report_via_email():
-  try:
+  
     today = date.today()
     start_of_month = date(today.year, today.month, 1)
     end_of_month = start_of_month.replace(day=28) + timedelta(days=4)
-    users = User.query.all()
+    # users = User.query.all()
     # for customer in users:
     #     id=customer.id 
     # Fetch orders from the database based on the date range 
@@ -182,9 +187,9 @@ def generate_send_monthly_report_via_email():
             # print(name)
             # print(email)
             orders_count = len(orders)
-            print(orders_count)
+            # print(orders_count)
             total_expenditure = sum(order.total_price for order in orders)
-            print(total_expenditure)
+            # print(total_expenditure)
             month_year = dt.now().strftime('%B %Y')
             
 
@@ -216,34 +221,26 @@ def generate_send_monthly_report_via_email():
                         html_content=html_content
                         
                         )
-   
-    logger.info("Monthly report sent successfully")
-  except Exception as e:
-        # Log any exceptions that occurred
-        logger.exception("Error occurred while sending monthly report: %s", e)
+    return "Email should arraive in your inbox shortly"
+    
 
 @shared_task
 def send_remainder_via_email():
     current_time = datetime.utcnow()
-    inactive_time = timedelta(hours=24,minutes=0, seconds=0)
-    customers = User.query.filter(User.roles.any(Role.name == 'Customer')).all()
-    for customer in customers:
-        customer_timestamp = customer.timestamp
-
-    # Calculate the time difference between the current time and the user's timestamp
-        time_since_last_activity = current_time - customer_timestamp
-
-        if time_since_last_activity > inactive_time:
-                # print(customer)
-                send_email (
-                      to_address=customer.email,
-                      subject="We miss you",
-                      message="Hello {}! It's been a while since you've visited. Explore our latest addition to the shop since your last visit!".format(customer.username)
-                      )
-    return jsonify({"status": "success", "message": "Email should arraive in your inbox shortly"})
+    inactive_time = timedelta(hours=1,minutes=0, seconds=0)
+    print (inactive_time)
+    inactive_customers = User.query.filter(User.roles.any(Role.name == 'Customer')).filter(User.timestamp < (current_time - inactive_time)).all()
+    print(inactive_customers)
+    for customer in inactive_customers:
+        send_email (
+                    to_address=customer.email,
+                    subject="We miss you",
+                    message="Hello {}! It's been a while since you've visited. Explore our latest addition to the shop since your last visit!".format(customer.username)
+                    )
+    return "Email should arraive in your inbox shortly"
 
 
-def send_email(to_address, subject, message,content="text", attachment_file=None):
+def send_email(to_address, subject, message, content="text", attachment_file=None):
    
     msg = MIMEMultipart()
     msg['From'] = "user1@gmail.com"
@@ -268,7 +265,7 @@ def notify_manager_for_Download_csv_via_email(id):
                         subject="Export CSV",
                         message="Dear {}, I wanted to inform you that  downloading the product information CSV file has been successfully executed.".format(manager.username),
                         ) 
-    return jsonify({"status": "success", "message": "Email should arraive in your inbox shortly"})
+    return "Email should arraive in your inbox shortly"
 
 @shared_task
 def notify_manager_for_signup_Approval(id):
@@ -278,7 +275,7 @@ def notify_manager_for_signup_Approval(id):
                         subject="Approve signup request",
                         message="Dear {}, I wanted to inform you that  your sign up request is approved by Admin.".format(manager.username),
                         ) 
-    return jsonify({"status": "success", "message": "Email should arraive in your inbox shortly"})
+    return "Email should arraive in your inbox shortly"
 
 @shared_task
 def notify_manager_for_signup_reject(id):
@@ -288,4 +285,4 @@ def notify_manager_for_signup_reject(id):
                         subject="Reject signup request",
                         message="Dear {}, I wanted to inform you that  your sign up request is rejected by Admin.".format(manager.username),
                         ) 
-    return jsonify({"status": "success", "message": "Email should arraive in your inbox shortly"})
+    return "Email should arraive in your inbox shortly"

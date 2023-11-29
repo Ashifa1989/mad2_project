@@ -16,6 +16,7 @@ import signUpManager from './components/signUpManager.js'
 import admin from './components/adminDashboard.js'
 import userOrder from './components/userorder.js'
 import managerDashboard from './components/managerDashboard.js'
+import productInformation from './components/productinformation.js'
 
 const routes = [
     { path: '/home', component: home },
@@ -36,6 +37,7 @@ const routes = [
     {path : '/adminDashboard', component : admin},
     {path : '/userOrder', component : userOrder},
     {path : '/managerDashboard', component : managerDashboard},
+    {path : '/productInformation/:id', component : productInformation},
 ]
 
 const router = new VueRouter({
@@ -46,7 +48,7 @@ const router = new VueRouter({
 const app = new Vue({
     el: "#app",
     router,
-    // store,
+    
     data: {
         isLoggedIn: false
     },
@@ -67,10 +69,7 @@ const app = new Vue({
             
         },
     },
-    // async mounted() {
-    //     this.isLoggedIn = localStorage.getItem('isLoggedIn');
-
-    // },
+    
     async mounted() {
         
         this.$root.$on('userLoggedInEvent', (roles) => {
