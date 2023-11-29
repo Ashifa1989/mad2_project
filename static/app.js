@@ -50,7 +50,9 @@ const app = new Vue({
     router,
     
     data: {
-        isLoggedIn: false
+        isLoggedIn: false,
+        isManager: false,
+        isAdmin: false
     },
     components: {
         navbar,
